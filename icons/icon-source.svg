@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title>DnD Command Sheet Icon</title>
+  <desc>Parchment square with a crimson d20 crest and a gold center.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f9f0df" />
+      <stop offset="100%" stop-color="#dcc7a4" />
+    </linearGradient>
+    <linearGradient id="rim" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#8e3240" />
+      <stop offset="100%" stop-color="#4c1822" />
+    </linearGradient>
+    <linearGradient id="core" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f5d07c" />
+      <stop offset="100%" stop-color="#be8640" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="28" stdDeviation="28" flood-color="#2d120f" flood-opacity="0.2" />
+    </filter>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="220" fill="url(#bg)" />
+  <rect x="94" y="94" width="836" height="836" rx="190" fill="none" stroke="#644a37" stroke-width="18" opacity="0.35" />
+  <g filter="url(#shadow)">
+    <path
+      d="M512 180 724 306 796 556 654 806 370 848 188 620 232 332Z"
+      fill="url(#rim)"
+      stroke="#2f0f15"
+      stroke-width="24"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M512 280 644 360 688 524 602 682 420 708 304 564 334 390Z"
+      fill="url(#core)"
+      stroke="#f9e8bc"
+      stroke-width="18"
+      stroke-linejoin="round"
+    />
+    <path d="M512 180V280M724 306 644 360M796 556 688 524M654 806 602 682M370 848 420 708M188 620 304 564M232 332 334 390" fill="none" stroke="#f7d69c" stroke-width="16" stroke-linecap="round" />
+    <path d="M512 280 334 390 304 564 420 708 602 682 688 524 644 360Z" fill="none" stroke="#7a2d38" stroke-width="14" stroke-linejoin="round" />
+  </g>
+  <circle cx="512" cy="512" r="92" fill="#fff7e8" opacity="0.92" />
+  <text
+    x="512"
+    y="548"
+    text-anchor="middle"
+    font-family="'Trebuchet MS', 'Gill Sans', sans-serif"
+    font-size="140"
+    font-weight="700"
+    fill="#42121b"
+  >
+    20
+  </text>
+</svg>

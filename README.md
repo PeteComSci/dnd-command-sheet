@@ -1,0 +1,66 @@
+# DnD Command Sheet
+
+Interactive offline-first Dungeons & Dragons character sheet built as a static web app.
+
+## Open It
+
+- Double-click `index.html`, or
+- In the project folder, run `python3 -m http.server 4173` and open `http://127.0.0.1:4173`
+
+## Mobile Install
+
+- Install support is built in as a Progressive Web App.
+- For Android/Chrome-class browsers, use the in-app `Install App` button when it appears.
+- For iPhone/iPad, open the hosted app in Safari, tap `Share`, then `Add to Home Screen`.
+- Service worker caching enables offline reuse after the first successful load.
+- Installation requires `https://` hosting or `localhost`. A raw `file://` open is fine for desktop use, but it is not installable.
+
+## Deploy To GitHub Pages
+
+This project is already set up for GitHub Pages with the workflow in `.github/workflows/deploy-pages.yml`.
+
+### Simple setup
+
+1. Create a new GitHub repository.
+2. Make the repository `Public` if you want free GitHub Pages on a GitHub Free account.
+3. Upload everything from this folder to the repository root.
+4. Push to the `main` branch.
+5. In GitHub, open `Settings` -> `Pages`.
+6. Under `Build and deployment`, set `Source` to `GitHub Actions` if it is not already selected.
+7. Open the `Actions` tab and wait for `Deploy GitHub Pages` to finish.
+8. Your site will be available at:
+   `https://YOUR-USERNAME.github.io/YOUR-REPOSITORY-NAME/`
+
+### If you want to use git from Terminal
+
+```bash
+cd /path/to/your/project
+git init
+git branch -M main
+git add .
+git commit -m "Add DnD character sheet app"
+git remote add origin https://github.com/YOUR-USERNAME/YOUR-REPOSITORY-NAME.git
+git push -u origin main
+```
+
+### Important notes
+
+- The app is static, so GitHub Pages can host it without a build step.
+- The PWA install feature works on GitHub Pages because Pages serves over `https://`.
+- If you update the app later, just push to `main` again.
+- The install prompt may appear only after the page has been visited once and meets the browser's install rules.
+
+## Included
+
+- Character identity, class, race, alignment, XP, player, campaign, and portrait
+- All six abilities with automatic modifiers and configurable saving throw training
+- Skills with proficiency or expertise, misc bonuses, and one-click rolls
+- AC, initiative, speed, hit points, hit dice, death saves, rest buttons, and custom resources
+- Attacks, spellcasting ability, spell save DC, spell attack, spell slots, and spellbook entries
+- Inventory, currency, carrying weight, encumbrance tracking, proficiencies, languages, and custom checks
+- Features and traits with filtering
+- Theme presets, color customization, compact mode, section visibility toggles, import/export JSON, print, and auto-save to local storage
+
+## Demo
+
+Use `Load Demo` to preload the Theron Vaelmont example inspired by your Roll20 sheet.

@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DnD Command Sheet</title>
+    <meta
+      name="description"
+      content="An interactive Dungeons & Dragons character sheet with live calculations, repeatable sections, customization controls, and offline-friendly persistence."
+    />
+    <meta name="theme-color" content="#7d2d38" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="DnD Sheet" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/favicon-32.png" sizes="32x32" />
+    <link rel="icon" href="icons/icon-192.png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero panel">
+        <div class="hero-backdrop" id="hero-backdrop"></div>
+        <div class="hero-copy">
+          <p class="eyebrow">Command Sheet</p>
+          <h1 data-display="basics.name">Unnamed Adventurer</h1>
+          <p class="subtitle">
+            <span data-display="basics.className">Wanderer</span>
+            <span class="bullet">•</span>
+            <span>Level <span data-display="basics.level">1</span></span>
+            <span class="bullet">•</span>
+            <span data-display="basics.race">Unknown Lineage</span>
+          </p>
+          <div class="hero-stats">
+            <div>
+              <span class="label">Armor Class</span>
+              <strong data-display="derived.ac">10</strong>
+            </div>
+            <div>
+              <span class="label">Passive Perception</span>
+              <strong data-display="derived.passivePerception">10</strong>
+            </div>
+            <div>
+              <span class="label">Spell Save DC</span>
+              <strong data-display="derived.spellSaveDc">10</strong>
+            </div>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button type="button" class="btn subtle" id="load-demo">Load Demo</button>
+          <button type="button" class="btn subtle" id="export-sheet">Export JSON</button>
+          <button type="button" class="btn subtle" id="import-sheet">Import JSON</button>
+          <button type="button" class="btn subtle" id="print-sheet">Print</button>
+          <button type="button" class="btn subtle is-hidden" id="install-app">Install App</button>
+          <button type="button" class="btn" id="toggle-settings">Customize</button>
+        </div>
+      </header>
+
+      <div class="install-note panel is-hidden" id="install-note">
+        <div>
+          <p class="eyebrow">Mobile Install</p>
+          <strong id="install-note-title">Install this sheet on your device</strong>
+          <p id="install-note-body">Use your browser install flow to add it to your home screen for fast access and offline use.</p>
+        </div>
+        <button type="button" class="btn subtle" id="dismiss-install-note">Dismiss</button>
+      </div>
+
+      <main class="layout">
+        <section class="main-column">
+          <section class="panel" data-section="basics">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Identity</p>
+                <h2>Character Basics</h2>
+              </div>
+            </div>
+            <div class="form-grid basics-grid">
+              <label>
+                <span>Character Name</span>
+                <input type="text" data-path="basics.name" placeholder="Theron Vaelmont" />
+              </label>
+              <label>
+                <span>Class / Archetype</span>
+                <input type="text" data-path="basics.className" placeholder="Gloom Stalker Ranger" />
+              </label>
+              <label>
+                <span>Level</span>
+                <input type="number" min="1" max="20" data-path="basics.level" />
+              </label>
+              <label>
+                <span>Background</span>
+                <input type="text" data-path="basics.background" placeholder="Noble" />
+              </label>
+              <label>
+                <span>Race / Lineage</span>
+                <input type="text" data-path="basics.race" placeholder="Half-Elf" />
+              </label>
+              <label>
+                <span>Alignment</span>
+                <input type="text" data-path="basics.alignment" placeholder="Lawful Neutral" />
+              </label>
+              <label>
+                <span>Experience</span>
+                <input type="number" min="0" data-path="basics.xp" />
+              </label>
+              <label>
+                <span>Proficiency Bonus Override</span>
+                <input type="number" min="0" data-path="combat.proficiencyBonusOverride" placeholder="Auto" />
+              </label>
+              <label class="span-2">
+                <span>Portrait URL</span>
+                <input type="url" data-path="basics.portraitUrl" placeholder="Optional image URL" />
+              </label>
+              <label>
+                <span>Player</span>
+                <input type="text" data-path="basics.playerName" placeholder="Optional" />
+              </label>
+              <label>
+                <span>Campaign</span>
+                <input type="text" data-path="basics.campaign" placeholder="Optional" />
+              </label>
+            </div>
+          </section>
+
+          <section class="panel" data-section="abilities">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Core</p>
+                <h2>Abilities & Saving Throws</h2>
+              </div>
+              <p class="helper">Scores auto-calculate modifiers. Saving throws can use none, proficiency, or expertise for homebrew characters.</p>
+            </div>
+            <div class="abilities-grid" id="abilities-grid"></div>
+          </section>
+
+          <section class="panel" data-section="combat">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Survival</p>
+                <h2>Combat & Vitals</h2>
+              </div>
+              <div class="inline-actions">
+                <button type="button" class="btn subtle" id="short-rest">Short Rest</button>
+                <button type="button" class="btn subtle" id="long-rest">Long Rest</button>
+              </div>
+            </div>
+            <div class="combat-grid">
+              <label>
+                <span>Armor Class</span>
+                <input type="number" data-path="combat.ac" />
+              </label>
+              <label>
+                <span>Initiative Bonus</span>
+                <input type="number" data-path="combat.initiativeBonus" />
+              </label>
+              <label>
+                <span>Speed</span>
+                <input type="number" data-path="combat.speed" />
+              </label>
+              <label>
+                <span>Hit Point Maximum</span>
+                <input type="number" data-path="combat.hpMax" />
+              </label>
+              <label>
+                <span>Current Hit Points</span>
+                <input type="number" data-path="combat.hpCurrent" />
+              </label>
+              <label>
+                <span>Temporary Hit Points</span>
+                <input type="number" data-path="combat.hpTemp" />
+              </label>
+              <label>
+                <span>Hit Dice Pool</span>
+                <input type="text" data-path="combat.hitDiceLabel" placeholder="3d10" />
+              </label>
+              <label>
+                <span>Hit Dice Used</span>
+                <input type="number" min="0" data-path="combat.hitDiceUsed" />
+              </label>
+              <label>
+                <span>Global Attack Modifier</span>
+                <input type="number" data-path="combat.globalAttackModifier" />
+              </label>
+              <label>
+                <span>Spellcasting Ability</span>
+                <select data-path="spells.castingAbility" id="spellcasting-ability"></select>
+              </label>
+              <label>
+                <span>Spell Save DC Bonus</span>
+                <input type="number" data-path="spells.saveDcBonus" />
+              </label>
+              <label>
+                <span>Spell Attack Bonus</span>
+                <input type="number" data-path="spells.attackBonusExtra" />
+              </label>
+            </div>
+            <div class="summary-strip">
+              <article>
+                <span class="label">Proficiency Bonus</span>
+                <strong data-display="derived.proficiencyBonus">+2</strong>
+              </article>
+              <article>
+                <span class="label">Initiative</span>
+                <strong data-display="derived.initiative">+0</strong>
+              </article>
+              <article>
+                <span class="label">Death Saves</span>
+                <strong data-display="derived.deathSaves">0 / 0</strong>
+              </article>
+              <article>
+                <span class="label">Hit Dice Remaining</span>
+                <strong data-display="derived.hitDiceRemaining">0</strong>
+              </article>
+            </div>
+            <div class="death-save-grid">
+              <div>
+                <span class="field-title">Successes</span>
+                <div class="dot-row" id="death-successes"></div>
+              </div>
+              <div>
+                <span class="field-title">Failures</span>
+                <div class="dot-row" id="death-failures"></div>
+              </div>
+            </div>
+            <div class="resource-stack">
+              <div class="section-subheading">
+                <h3>Custom Resources</h3>
+                <button type="button" class="btn subtle" data-add="resources">Add Resource</button>
+              </div>
+              <div id="resources-list" class="card-list"></div>
+            </div>
+          </section>
+
+          <section class="panel" data-section="skills">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Expertise</p>
+                <h2>Skills</h2>
+              </div>
+              <p class="helper">Each skill has proficiency level, misc bonus, and a one-click roll.</p>
+            </div>
+            <div id="skills-list" class="list-table"></div>
+          </section>
+
+          <section class="panel" data-section="attacks">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Offense</p>
+                <h2>Attacks & Spellcasting</h2>
+              </div>
+              <button type="button" class="btn subtle" data-add="attacks">Add Attack</button>
+            </div>
+            <div id="attacks-list" class="list-table"></div>
+          </section>
+
+          <section class="panel" data-section="spells">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Arcana</p>
+                <h2>Spell Slots & Spellbook</h2>
+              </div>
+              <button type="button" class="btn subtle" data-add="spells.list">Add Spell</button>
+            </div>
+            <div class="summary-strip">
+              <article>
+                <span class="label">Spell Attack</span>
+                <strong data-display="derived.spellAttack">+0</strong>
+              </article>
+              <article>
+                <span class="label">Spell Save DC</span>
+                <strong data-display="derived.spellSaveDc">10</strong>
+              </article>
+            </div>
+            <div id="spell-slots" class="slots-grid"></div>
+            <div id="spells-list" class="list-table"></div>
+          </section>
+
+          <section class="panel" data-section="inventory">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Loadout</p>
+                <h2>Equipment & Currency</h2>
+              </div>
+              <button type="button" class="btn subtle" data-add="inventory">Add Item</button>
+            </div>
+            <div class="currency-grid">
+              <label><span>CP</span><input type="number" min="0" data-path="currency.cp" /></label>
+              <label><span>SP</span><input type="number" min="0" data-path="currency.sp" /></label>
+              <label><span>EP</span><input type="number" min="0" data-path="currency.ep" /></label>
+              <label><span>GP</span><input type="number" min="0" data-path="currency.gp" /></label>
+              <label><span>PP</span><input type="number" min="0" data-path="currency.pp" /></label>
+            </div>
+            <div class="summary-strip">
+              <article>
+                <span class="label">Total Weight</span>
+                <strong data-display="derived.totalWeight">0 lb</strong>
+              </article>
+              <article>
+                <span class="label">Encumbrance</span>
+                <strong data-display="derived.encumbrance">Unencumbered</strong>
+              </article>
+              <article>
+                <span class="label">Carrying Capacity</span>
+                <strong data-display="derived.capacity">0 lb</strong>
+              </article>
+            </div>
+            <div id="inventory-list" class="list-table"></div>
+          </section>
+        </section>
+
+        <aside class="side-column">
+          <section class="panel" data-section="personality">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Roleplay</p>
+                <h2>Character Details</h2>
+              </div>
+            </div>
+            <div class="stack-fields">
+              <label>
+                <span>Personality Traits</span>
+                <textarea rows="3" data-path="personality.traits"></textarea>
+              </label>
+              <label>
+                <span>Ideals</span>
+                <textarea rows="3" data-path="personality.ideals"></textarea>
+              </label>
+              <label>
+                <span>Bonds</span>
+                <textarea rows="3" data-path="personality.bonds"></textarea>
+              </label>
+              <label>
+                <span>Flaws</span>
+                <textarea rows="3" data-path="personality.flaws"></textarea>
+              </label>
+              <label>
+                <span>Appearance & Backstory Notes</span>
+                <textarea rows="5" data-path="personality.notes"></textarea>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel" data-section="proficiencies">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Mastery</p>
+                <h2>Tools, Languages & Proficiencies</h2>
+              </div>
+            </div>
+            <div class="section-subheading">
+              <h3>Custom Skill Checks</h3>
+              <button type="button" class="btn subtle" data-add="customChecks">Add Check</button>
+            </div>
+            <div id="custom-checks-list" class="list-table compact"></div>
+            <div class="section-subheading">
+              <h3>Other Proficiencies & Languages</h3>
+              <button type="button" class="btn subtle" data-add="proficiencies">Add Entry</button>
+            </div>
+            <div id="proficiencies-list" class="list-table compact"></div>
+          </section>
+
+          <section class="panel" data-section="features">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Rules Text</p>
+                <h2>Features & Traits</h2>
+              </div>
+              <button type="button" class="btn subtle" data-add="features">Add Feature</button>
+            </div>
+            <label class="filter-box">
+              <span>Filter Features</span>
+              <input type="search" id="feature-filter" placeholder="Ranger, racial, feat..." />
+            </label>
+            <div id="features-list" class="feature-list"></div>
+          </section>
+
+          <section class="panel" data-section="rolls">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Table Use</p>
+                <h2>Dice Roller</h2>
+              </div>
+            </div>
+            <div class="roller-grid">
+              <label class="span-2">
+                <span>Formula</span>
+                <input type="text" id="roll-formula" placeholder="1d20+5 or 2d6+3" />
+              </label>
+              <button type="button" class="btn subtle" data-roll="1d20">d20</button>
+              <button type="button" class="btn subtle" data-roll="1d8">d8</button>
+              <button type="button" class="btn subtle" data-roll="1d6">d6</button>
+              <button type="button" class="btn subtle" data-roll="1d4">d4</button>
+              <button type="button" class="btn" id="roll-submit">Roll</button>
+            </div>
+            <div id="roll-log" class="roll-log"></div>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <aside class="settings-drawer" id="settings-drawer" aria-hidden="true">
+      <div class="drawer-header">
+        <div>
+          <p class="eyebrow">Customization</p>
+          <h2>Sheet Controls</h2>
+        </div>
+        <button type="button" class="icon-btn" id="close-settings" aria-label="Close customization panel">✕</button>
+      </div>
+      <div class="drawer-content">
+        <section>
+          <h3>Theme</h3>
+          <label>
+            <span>Preset</span>
+            <select data-path="ui.themePreset" id="theme-preset"></select>
+          </label>
+          <label>
+            <span>Accent</span>
+            <input type="color" data-path="ui.accentColor" />
+          </label>
+          <label>
+            <span>Panel Tint</span>
+            <input type="color" data-path="ui.panelColor" />
+          </label>
+          <label>
+            <span>Font Scale</span>
+            <input type="range" min="90" max="120" step="1" data-path="ui.fontScale" />
+          </label>
+          <label>
+            <span>Encumbrance</span>
+            <select data-path="ui.encumbranceMode" id="encumbrance-mode"></select>
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" data-path="ui.compactMode" />
+            <span>Compact density</span>
+          </label>
+        </section>
+
+        <section>
+          <h3>Sheet Visibility</h3>
+          <div id="section-toggles" class="toggle-grid"></div>
+        </section>
+
+        <section>
+          <h3>Utilities</h3>
+          <button type="button" class="btn subtle wide" id="save-portrait">Upload Portrait</button>
+          <button type="button" class="btn subtle wide" id="clear-sheet">Reset To Blank Sheet</button>
+        </section>
+      </div>
+    </aside>
+
+    <input type="file" id="import-file" accept="application/json" hidden />
+    <input type="file" id="portrait-file" accept="image/*" hidden />
+
+    <script src="app.js"></script>
+  </body>
+</html>
