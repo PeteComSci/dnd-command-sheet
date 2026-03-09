@@ -159,6 +159,19 @@ h3 {
   gap: 16px;
 }
 
+.profile-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.profile-toolbar label {
+  min-width: 220px;
+  flex: 1;
+}
+
 .hero-stats div,
 .summary-strip article {
   min-width: 140px;
@@ -506,7 +519,7 @@ textarea {
 }
 
 .list-row.attack-row {
-  grid-template-columns: minmax(170px, 1.2fr) 110px minmax(180px, 1fr) minmax(140px, 1fr) auto auto;
+  grid-template-columns: minmax(170px, 1.2fr) 130px 120px minmax(180px, 1fr) minmax(140px, 1fr) 140px auto auto;
 }
 
 .list-row.spell-row {

@@ -1,4 +1,5 @@
 const STORAGE_KEY = "dnd-command-sheet.v1";
+const STORAGE_KEY_V2 = "dnd-command-sheet.v2";
 const INSTALL_NOTE_KEY = "dnd-command-sheet.install-note.dismissed";
 
 const ABILITIES = [
@@ -101,7 +102,8 @@ const SPELL_LEVEL_OPTIONS = Array.from({ length: 10 }, (_, index) => index);
 const SPELL_SLOT_LEVELS = Array.from({ length: 9 }, (_, index) => index + 1);
 
 const dom = {};
-let state = loadState();
+let appState = loadAppState();
+let state = getCurrentProfileState();
 let saveTimer = null;
 let settingsOpen = false;
 let deferredInstallPrompt = null;
@@ -141,6 +143,7 @@ function cacheDom() {
   dom.installNote = document.getElementById("install-note");
   dom.installNoteTitle = document.getElementById("install-note-title");
   dom.installNoteBody = document.getElementById("install-note-body");
+  dom.profileSelect = document.getElementById("profile-select");
 }
 
 function populateStaticSelects() {
@@ -188,6 +191,10 @@ function bindEvents() {
     }
   });
 
+  dom.profileSelect.addEventListener("change", (event) => {
+    switchProfile(event.target.value);
+  });
+
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && settingsOpen) {
       toggleSettings(false);
@@ -201,6 +208,11 @@ function handleInputEvent(event) {
     const path = boundField.dataset.path;
     const value = readInputValue(boundField);
     setPath(state, path, value);
+
+    if (path === "basics.name" && String(value).trim()) {
+      getCurrentProfile().name = String(value).trim();
+      renderProfileSelect();
+    }
 
     if (path === "ui.themePreset") {
       applyThemePreset(value);
@@ -300,9 +312,9 @@ function handleClickEvent(event) {
   }
 
   if (event.target.closest("#load-demo")) {
-    state = buildDemoState();
-    renderAll();
-    scheduleSave();
+    if (window.confirm("Replace the current character with the Theron demo sheet?")) {
+      replaceCurrentProfile(buildDemoState());
+    }
     return;
   }
 
@@ -333,10 +345,28 @@ function handleClickEvent(event) {
 
   if (event.target.closest("#clear-sheet")) {
     if (window.confirm("Reset the sheet to a blank character?")) {
-      state = createDefaultState();
-      renderAll();
-      scheduleSave();
+      replaceCurrentProfile(createDefaultState());
     }
+    return;
+  }
+
+  if (event.target.closest("#new-profile")) {
+    createProfile();
+    return;
+  }
+
+  if (event.target.closest("#duplicate-profile")) {
+    duplicateCurrentProfile();
+    return;
+  }
+
+  if (event.target.closest("#delete-profile")) {
+    deleteCurrentProfile();
+    return;
+  }
+
+  if (event.target.closest("#rename-profile")) {
+    renameCurrentProfile();
     return;
   }
 
@@ -410,6 +440,7 @@ function handleClickEvent(event) {
 }
 
 function renderAll() {
+  renderProfileSelect();
   renderAbilityCards();
   renderSkills();
   renderResources();
@@ -583,7 +614,27 @@ function renderAttacks() {
             />
           </label>
           <label>
-            <span>Attack Bonus</span>
+            <span>Ability</span>
+            <select
+              data-collection="attacks"
+              data-id="${attack.id}"
+              data-field="ability"
+            >
+              ${buildOptions(
+                [
+                  { value: "strength", label: "Strength" },
+                  { value: "dexterity", label: "Dexterity" },
+                  { value: "constitution", label: "Constitution" },
+                  { value: "intelligence", label: "Intelligence" },
+                  { value: "wisdom", label: "Wisdom" },
+                  { value: "charisma", label: "Charisma" },
+                ],
+                attack.ability
+              )}
+            </select>
+          </label>
+          <label>
+            <span>Attack Bonus Extra</span>
             <input
               type="number"
               data-collection="attacks"
@@ -612,6 +663,16 @@ function renderAttacks() {
               value="${escapeHtml(attack.notes)}"
             />
           </label>
+          <label class="checkbox">
+            <input
+              type="checkbox"
+              data-collection="attacks"
+              data-id="${attack.id}"
+              data-field="proficient"
+              ${attack.proficient ? "checked" : ""}
+            />
+            <span>Add proficiency</span>
+          </label>
           <button type="button" class="btn subtle" data-roll-attack="${attack.id}">
             Hit <span data-attack-total="${attack.id}">${displaySigned(getAttackTotal(attack))}</span>
           </button>
@@ -619,6 +680,18 @@ function renderAttacks() {
             Remove
           </button>
         </div>
+      `
+    )
+    .join("");
+}
+
+function renderProfileSelect() {
+  dom.profileSelect.innerHTML = appState.profiles
+    .map(
+      (profile) => `
+        <option value="${profile.id}" ${profile.id === appState.currentProfileId ? "selected" : ""}>
+          ${escapeHtml(profile.name)}
+        </option>
       `
     )
     .join("");
@@ -1389,8 +1462,9 @@ function performRoll(formula, label) {
 }
 
 function exportSheet() {
-  const fileName = `${slugify(state.basics.name || "dnd-sheet")}.json`;
-  const payload = JSON.stringify(state, null, 2);
+  const currentProfile = getCurrentProfile();
+  const fileName = `${slugify(currentProfile.name || state.basics.name || "dnd-sheet")}.json`;
+  const payload = JSON.stringify(currentProfile, null, 2);
   const blob = new Blob([payload], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -1409,9 +1483,7 @@ function importFromFile(event) {
   reader.onload = () => {
     try {
       const parsed = JSON.parse(String(reader.result));
-      state = mergeDefaults(createDefaultState(), parsed);
-      renderAll();
-      scheduleSave();
+      importProfile(parsed);
     } catch (error) {
       window.alert("Could not read that JSON file.");
     } finally {
@@ -1443,20 +1515,41 @@ function scheduleSave() {
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(appState));
 }
 
-function loadState() {
-  const defaults = createDefaultState();
+function loadAppState() {
+  const defaults = createDefaultAppState();
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) {
-      return defaults;
+    const saved = localStorage.getItem(STORAGE_KEY_V2);
+    if (saved) {
+      return hydrateAppState(JSON.parse(saved));
     }
-    return mergeDefaults(defaults, JSON.parse(saved));
+
+    const legacy = localStorage.getItem(STORAGE_KEY);
+    if (legacy) {
+      const migrated = createProfileWrapper(
+        "My Character",
+        mergeDefaults(createDefaultState(), JSON.parse(legacy))
+      );
+      return {
+        profiles: [migrated],
+        currentProfileId: migrated.id,
+      };
+    }
+
+    return defaults;
   } catch (error) {
     return defaults;
   }
+}
+
+function createDefaultAppState() {
+  const initial = createProfileWrapper("My Character", createDefaultState());
+  return {
+    profiles: [initial],
+    currentProfileId: initial.id,
+  };
 }
 
 function createDefaultState() {
@@ -1605,9 +1698,9 @@ function buildDemoState() {
   ];
 
   demo.attacks = [
-    { id: createId(), name: "Shortsword", attackBonus: 3, damage: "1d6+3 Piercing", notes: "Finesse, light" },
-    { id: createId(), name: "Longbow", attackBonus: 3, damage: "1d8+3 Piercing", notes: "Range 150/600" },
-    { id: createId(), name: "Hail of Thorns", attackBonus: 0, damage: "DC 12, 1d10 Piercing", notes: "Spell rider" },
+    { id: createId(), name: "Shortsword", ability: "dexterity", attackBonus: 0, proficient: true, damage: "1d6+3 Piercing", notes: "Finesse, light" },
+    { id: createId(), name: "Longbow", ability: "dexterity", attackBonus: 0, proficient: true, damage: "1d8+3 Piercing", notes: "Range 150/600" },
+    { id: createId(), name: "Hail of Thorns", ability: "wisdom", attackBonus: 0, proficient: false, damage: "DC 12, 1d10 Piercing", notes: "Spell rider" },
   ];
 
   demo.spells.list = [
@@ -1705,7 +1798,15 @@ function createCollectionEntry(path) {
 }
 
 function createAttack() {
-  return { id: createId(), name: "", attackBonus: 0, damage: "", notes: "" };
+  return {
+    id: createId(),
+    name: "",
+    ability: "strength",
+    attackBonus: 0,
+    proficient: true,
+    damage: "",
+    notes: "",
+  };
 }
 
 function createSpellSlot(level) {
@@ -1759,7 +1860,9 @@ function getCustomCheckTotal(entry) {
 }
 
 function getAttackTotal(entry) {
-  return numberValue(entry.attackBonus) + numberValue(state.combat.globalAttackModifier);
+  const ability = getAbilityModifier(entry.ability || "strength");
+  const proficiency = entry.proficient ? getProficiencyBonus() : 0;
+  return ability + proficiency + numberValue(entry.attackBonus) + numberValue(state.combat.globalAttackModifier);
 }
 
 function getInitiative() {
@@ -1975,6 +2078,195 @@ function roundToOne(value) {
 
 function createId() {
   return globalThis.crypto?.randomUUID?.() || `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function hydrateAppState(value) {
+  const defaults = createDefaultAppState();
+  const merged = mergeDefaults(defaults, value);
+  merged.profiles = (merged.profiles || []).map((profile) => ({
+    id: profile.id || createId(),
+    name: profile.name || "My Character",
+    data: normalizeState(mergeDefaults(createDefaultState(), profile.data)),
+  }));
+  if (!merged.profiles.length) {
+    const fallback = createProfileWrapper("My Character", createDefaultState());
+    merged.profiles = [fallback];
+    merged.currentProfileId = fallback.id;
+  }
+  if (!merged.profiles.some((profile) => profile.id === merged.currentProfileId)) {
+    merged.currentProfileId = merged.profiles[0].id;
+  }
+  return merged;
+}
+
+function createProfileWrapper(name, data) {
+  return {
+    id: createId(),
+    name,
+    data: normalizeState(mergeDefaults(createDefaultState(), data)),
+  };
+}
+
+function getCurrentProfile() {
+  return (
+    appState.profiles.find((profile) => profile.id === appState.currentProfileId) ||
+    appState.profiles[0]
+  );
+}
+
+function getCurrentProfileState() {
+  return getCurrentProfile().data;
+}
+
+function syncCurrentStateRef() {
+  state = getCurrentProfileState();
+}
+
+function replaceCurrentProfile(nextState) {
+  const profile = getCurrentProfile();
+  profile.data = normalizeState(mergeDefaults(createDefaultState(), nextState));
+  if (profile.data.basics.name) {
+    profile.name = profile.data.basics.name;
+  }
+  syncCurrentStateRef();
+  renderAll();
+  scheduleSave();
+}
+
+function switchProfile(profileId) {
+  if (!appState.profiles.some((profile) => profile.id === profileId)) {
+    return;
+  }
+  appState.currentProfileId = profileId;
+  syncCurrentStateRef();
+  renderAll();
+  scheduleSave();
+}
+
+function createProfile() {
+  const requestedName = window.prompt("New character name:", "New Character");
+  if (requestedName === null) {
+    return;
+  }
+  const name = requestedName.trim() || "New Character";
+  const profile = createProfileWrapper(name, createDefaultState());
+  profile.data.basics.name = name;
+  appState.profiles.push(profile);
+  appState.currentProfileId = profile.id;
+  syncCurrentStateRef();
+  renderAll();
+  scheduleSave();
+}
+
+function duplicateCurrentProfile() {
+  const current = getCurrentProfile();
+  const requestedName = window.prompt("Name for the copy:", `${current.name} Copy`);
+  if (requestedName === null) {
+    return;
+  }
+  const copy = createProfileWrapper(
+    requestedName.trim() || `${current.name} Copy`,
+    JSON.parse(JSON.stringify(current.data))
+  );
+  copy.data.basics.name = copy.name;
+  appState.profiles.push(copy);
+  appState.currentProfileId = copy.id;
+  syncCurrentStateRef();
+  renderAll();
+  scheduleSave();
+}
+
+function deleteCurrentProfile() {
+  if (appState.profiles.length === 1) {
+    window.alert("You must keep at least one character slot.");
+    return;
+  }
+  const current = getCurrentProfile();
+  if (!window.confirm(`Delete character "${current.name}"?`)) {
+    return;
+  }
+  appState.profiles = appState.profiles.filter((profile) => profile.id !== current.id);
+  appState.currentProfileId = appState.profiles[0].id;
+  syncCurrentStateRef();
+  renderAll();
+  scheduleSave();
+}
+
+function renameCurrentProfile() {
+  const current = getCurrentProfile();
+  const requestedName = window.prompt("Rename current character:", current.name);
+  if (requestedName === null) {
+    return;
+  }
+  const name = requestedName.trim() || current.name;
+  current.name = name;
+  state.basics.name = name;
+  syncCurrentStateRef();
+  renderAll();
+  scheduleSave();
+}
+
+function importProfile(parsed) {
+  if (parsed && Array.isArray(parsed.profiles) && parsed.currentProfileId) {
+    appState = hydrateAppState(parsed);
+    syncCurrentStateRef();
+    renderAll();
+    scheduleSave();
+    return;
+  }
+
+  if (parsed && parsed.data && parsed.name) {
+    const profile = createProfileWrapper(parsed.name, parsed.data);
+    appState.profiles.push(profile);
+    appState.currentProfileId = profile.id;
+    syncCurrentStateRef();
+    renderAll();
+    scheduleSave();
+    return;
+  }
+
+  const name = parsed?.basics?.name || "Imported Character";
+  const profile = createProfileWrapper(name, parsed);
+  appState.profiles.push(profile);
+  appState.currentProfileId = profile.id;
+  syncCurrentStateRef();
+  renderAll();
+  scheduleSave();
+}
+
+function normalizeState(inputState) {
+  const normalized = mergeDefaults(createDefaultState(), inputState);
+  normalized.attacks = (normalized.attacks || []).map((attack) => ({
+    ...createAttack(),
+    ...attack,
+    proficient: attack?.proficient ?? true,
+    ability: attack?.ability || "strength",
+  }));
+  normalized.resources = (normalized.resources || []).map((resource) => ({
+    id: resource.id || createId(),
+    name: resource.name || "",
+    current: numberValue(resource.current),
+    max: numberValue(resource.max),
+    resetOn: resource.resetOn || "manual",
+  }));
+  normalized.spells.slots = SPELL_SLOT_LEVELS.map((level, index) => {
+    const existing = normalized.spells.slots?.[index];
+    return {
+      id: existing?.id || createId(),
+      level,
+      max: numberValue(existing?.max),
+      used: clamp(numberValue(existing?.used), 0, numberValue(existing?.max)),
+    };
+  });
+  normalized.inventory = (normalized.inventory || []).map((item) => ({
+    id: item.id || createId(),
+    name: item.name || "",
+    qty: numberValue(item.qty, 1),
+    weight: numberValue(item.weight),
+    notes: item.notes || "",
+    carried: item.carried ?? true,
+  }));
+  return normalized;
 }
 
 function clamp(value, min, max) {
