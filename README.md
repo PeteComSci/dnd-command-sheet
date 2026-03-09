@@ -49,6 +49,7 @@ git push -u origin main
 - The PWA install feature works on GitHub Pages because Pages serves over `https://`.
 - If you update the app later, just push to `main` again.
 - The install prompt may appear only after the page has been visited once and meets the browser's install rules.
+- For privacy, avoid adding remote portrait image URLs. Use uploaded portraits instead.
 
 ## Included
 
