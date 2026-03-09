@@ -72,4 +72,4 @@ git push -u origin main
 
 ## Demo
 
-Use `Load Demo` to preload the Theron Vaelmont example inspired by your Roll20 sheet.
+Use `Load Demo` to preload the Theron Vaelmont example character.
