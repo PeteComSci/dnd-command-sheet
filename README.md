@@ -15,6 +15,14 @@ Interactive offline-first Dungeons & Dragons character sheet built as a static w
 - Service worker caching enables offline reuse after the first successful load.
 - Installation requires `https://` hosting or `localhost`. A raw `file://` open is fine for desktop use, but it is not installable.
 
+## Save Security
+
+- By default, character changes are kept only for the current browser session.
+- To keep characters between visits, open `Customize` -> `Security` and set a passphrase.
+- Persistent saves are encrypted in the browser before they are written to storage.
+- If you forget the passphrase, the encrypted save cannot be recovered.
+- `Export JSON` is still the safest backup option before major edits.
+
 ## Deploy To GitHub Pages
 
 This project is already set up for GitHub Pages with the workflow in `.github/workflows/deploy-pages.yml`.
@@ -60,7 +68,7 @@ git push -u origin main
 - Attacks, spellcasting ability, spell save DC, spell attack, spell slots, and spellbook entries
 - Inventory, currency, carrying weight, encumbrance tracking, proficiencies, languages, and custom checks
 - Features and traits with filtering
-- Theme presets, color customization, compact mode, section visibility toggles, import/export JSON, print, and auto-save to local storage
+- Theme presets, color customization, compact mode, section visibility toggles, import/export JSON, print, session autosave, and optional encrypted persistent saves
 
 ## Demo
 

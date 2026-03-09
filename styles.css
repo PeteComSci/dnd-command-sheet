@@ -97,6 +97,32 @@ button {
   margin: 6px 0 0;
 }
 
+.security-note {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 24px;
+  margin-bottom: 24px;
+}
+
+.security-copy p {
+  margin: 6px 0 0;
+}
+
+.security-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  min-width: min(100%, 620px);
+}
+
+.security-controls label {
+  min-width: 200px;
+  flex: 1;
+}
+
 .hero-backdrop {
   position: absolute;
   inset: 0;
@@ -311,6 +337,16 @@ label {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.info-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(90, 73, 58, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.52);
 }
 
 label > span {
@@ -698,6 +734,18 @@ input[type="color"] {
   display: none !important;
 }
 
+body.storage-locked .page-shell > :not(.security-note),
+body.storage-locked .settings-drawer {
+  pointer-events: none;
+  user-select: none;
+  filter: blur(3px);
+  opacity: 0.35;
+}
+
+body.storage-locked .security-note {
+  pointer-events: auto;
+}
+
 .compact .list-row,
 body.compact section.panel {
   padding: 18px;
@@ -736,6 +784,12 @@ body.compact .hero {
   }
 
   .install-note {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .security-note,
+  .security-controls {
     flex-direction: column;
     align-items: stretch;
   }

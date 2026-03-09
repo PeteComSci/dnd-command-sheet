@@ -8,6 +8,10 @@
       name="description"
       content="An interactive Dungeons & Dragons character sheet with live calculations, repeatable sections, customization controls, and offline-friendly persistence."
     />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+    />
     <meta name="theme-color" content="#7d2d38" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -75,6 +79,28 @@
         <button type="button" class="btn subtle" id="dismiss-install-note">Dismiss</button>
       </div>
 
+      <div class="security-note panel" id="security-note">
+        <div class="security-copy">
+          <p class="eyebrow">Secure Saves</p>
+          <strong id="security-note-title">Save protection</strong>
+          <p id="security-note-body">Set a passphrase to keep saved characters encrypted between visits.</p>
+        </div>
+        <div class="security-controls">
+          <label id="security-passphrase-label">
+            <span>Passphrase</span>
+            <input type="password" id="security-passphrase" autocomplete="current-password" />
+          </label>
+          <label id="security-confirm-label">
+            <span>Confirm Passphrase</span>
+            <input type="password" id="security-passphrase-confirm" autocomplete="new-password" />
+          </label>
+          <div class="inline-actions">
+            <button type="button" class="btn" id="security-primary">Protect Saves</button>
+            <button type="button" class="btn subtle" id="security-secondary">Close</button>
+          </div>
+        </div>
+      </div>
+
       <main class="layout">
         <section class="main-column">
           <section class="panel" data-section="basics">
@@ -117,10 +143,11 @@
                 <span>Proficiency Bonus Override</span>
                 <input type="number" min="0" data-path="combat.proficiencyBonusOverride" placeholder="Auto" />
               </label>
-              <label class="span-2">
-                <span>Portrait URL</span>
-                <input type="url" data-path="basics.portraitUrl" placeholder="Optional image URL" />
-              </label>
+              <div class="info-card span-2">
+                <span>Portrait</span>
+                <p class="helper">Use `Upload Portrait`. Remote image URLs are blocked for privacy.</p>
+                <button type="button" class="btn subtle" id="save-portrait-inline">Upload Portrait</button>
+              </div>
               <label>
                 <span>Player</span>
                 <input type="text" data-path="basics.playerName" placeholder="Optional" />
@@ -448,6 +475,13 @@
         <section>
           <h3>Sheet Visibility</h3>
           <div id="section-toggles" class="toggle-grid"></div>
+        </section>
+
+        <section>
+          <h3>Security</h3>
+          <p class="helper" id="security-settings-status">Session-only until you set a passphrase.</p>
+          <button type="button" class="btn subtle wide" id="manage-security">Manage Save Protection</button>
+          <button type="button" class="btn subtle wide is-hidden" id="lock-app">Lock Protected Saves</button>
         </section>
 
         <section>

@@ -1,6 +1,15 @@
 const STORAGE_KEY = "dnd-command-sheet.v1";
 const STORAGE_KEY_V2 = "dnd-command-sheet.v2";
+const SECURE_STORAGE_KEY = "dnd-command-sheet.secure.v1";
+const SESSION_STORAGE_KEY = "dnd-command-sheet.session.v1";
 const INSTALL_NOTE_KEY = "dnd-command-sheet.install-note.dismissed";
+const SECURITY_ITERATIONS = 250000;
+const MAX_FORMULA_LENGTH = 60;
+const MAX_FORMULA_TERMS = 20;
+const MAX_DICE_COUNT = 200;
+const MAX_DIE_SIDES = 1000;
+const MAX_FLAT_BONUS = 100000;
+const MAX_PORTRAIT_FILE_BYTES = 2 * 1024 * 1024;
 
 const ABILITIES = [
   { key: "strength", label: "Strength", short: "STR" },
@@ -102,6 +111,11 @@ const SPELL_LEVEL_OPTIONS = Array.from({ length: 10 }, (_, index) => index);
 const SPELL_SLOT_LEVELS = Array.from({ length: 9 }, (_, index) => index + 1);
 
 const dom = {};
+let securityState = {
+  mode: "session",
+  panelMode: "setup",
+  passphrase: "",
+};
 let appState = loadAppState();
 let state = getCurrentProfileState();
 let saveTimer = null;
@@ -115,6 +129,7 @@ function init() {
   populateStaticSelects();
   bindEvents();
   renderAll();
+  renderSecurityUi();
   setupPwa();
 }
 
@@ -144,6 +159,18 @@ function cacheDom() {
   dom.installNoteTitle = document.getElementById("install-note-title");
   dom.installNoteBody = document.getElementById("install-note-body");
   dom.profileSelect = document.getElementById("profile-select");
+  dom.securityNote = document.getElementById("security-note");
+  dom.securityNoteTitle = document.getElementById("security-note-title");
+  dom.securityNoteBody = document.getElementById("security-note-body");
+  dom.securityPassphrase = document.getElementById("security-passphrase");
+  dom.securityPassphraseConfirm = document.getElementById("security-passphrase-confirm");
+  dom.securityPassphraseLabel = document.getElementById("security-passphrase-label");
+  dom.securityConfirmLabel = document.getElementById("security-confirm-label");
+  dom.securityPrimary = document.getElementById("security-primary");
+  dom.securitySecondary = document.getElementById("security-secondary");
+  dom.securitySettingsStatus = document.getElementById("security-settings-status");
+  dom.manageSecurity = document.getElementById("manage-security");
+  dom.lockApp = document.getElementById("lock-app");
 }
 
 function populateStaticSelects() {
@@ -194,6 +221,9 @@ function bindEvents() {
   dom.profileSelect.addEventListener("change", (event) => {
     switchProfile(event.target.value);
   });
+
+  dom.securityPassphrase.addEventListener("keydown", handleSecurityKeydown);
+  dom.securityPassphraseConfirm.addEventListener("keydown", handleSecurityKeydown);
 
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && settingsOpen) {
@@ -343,6 +373,11 @@ function handleClickEvent(event) {
     return;
   }
 
+  if (event.target.closest("#save-portrait-inline")) {
+    dom.portraitFile.click();
+    return;
+  }
+
   if (event.target.closest("#clear-sheet")) {
     if (window.confirm("Reset the sheet to a blank character?")) {
       replaceCurrentProfile(createDefaultState());
@@ -367,6 +402,26 @@ function handleClickEvent(event) {
 
   if (event.target.closest("#rename-profile")) {
     renameCurrentProfile();
+    return;
+  }
+
+  if (event.target.closest("#manage-security")) {
+    openSecurityPanel(securityState.mode === "unlocked" ? "change" : securityState.panelMode || "setup");
+    return;
+  }
+
+  if (event.target.closest("#lock-app")) {
+    lockProtectedSaves();
+    return;
+  }
+
+  if (event.target.closest("#security-primary")) {
+    handleSecurityPrimaryAction();
+    return;
+  }
+
+  if (event.target.closest("#security-secondary")) {
+    handleSecuritySecondaryAction();
     return;
   }
 
@@ -457,6 +512,7 @@ function renderAll() {
   syncSectionVisibility();
   applyTheme();
   updateDisplays();
+  renderSecurityUi();
 }
 
 function renderAbilityCards() {
@@ -695,6 +751,127 @@ function renderProfileSelect() {
       `
     )
     .join("");
+}
+
+function renderSecurityUi() {
+  const status = getSecurityStatus();
+  const showPanel = securityState.mode === "locked" || securityState.panelMode !== null;
+
+  dom.securitySettingsStatus.textContent = status.settings;
+  dom.lockApp.classList.toggle("is-hidden", securityState.mode !== "unlocked");
+  dom.securityNote.classList.toggle("is-hidden", !showPanel);
+  document.body.classList.toggle("storage-locked", securityState.mode === "locked");
+
+  if (!showPanel) {
+    return;
+  }
+
+  dom.securityNoteTitle.textContent = status.title;
+  dom.securityNoteBody.textContent = status.body;
+  dom.securityPassphraseLabel.classList.remove("is-hidden");
+  dom.securityConfirmLabel.classList.toggle(
+    "is-hidden",
+    securityState.panelMode !== "setup" && securityState.panelMode !== "change"
+  );
+  dom.securitySecondary.classList.toggle(
+    "is-hidden",
+    securityState.panelMode === "unlock"
+  );
+
+  if (securityState.panelMode === "unlock") {
+    dom.securityPrimary.textContent = "Unlock Saves";
+    dom.securityConfirmLabel.classList.add("is-hidden");
+    dom.securityPassphraseConfirm.value = "";
+    dom.securityPassphrase.setAttribute("autocomplete", "current-password");
+  } else if (securityState.panelMode === "change") {
+    dom.securityPrimary.textContent = "Update Passphrase";
+    dom.securitySecondary.textContent = "Cancel";
+    dom.securityPassphrase.setAttribute("autocomplete", "new-password");
+  } else {
+    dom.securityPrimary.textContent = "Protect Saves";
+    dom.securitySecondary.textContent = "Close";
+    dom.securityConfirmLabel.classList.remove("is-hidden");
+    dom.securityPassphrase.setAttribute("autocomplete", "new-password");
+  }
+}
+
+function getSecurityStatus() {
+  if (securityState.mode === "locked") {
+    return {
+      title: "Protected saves are locked",
+      body: "Enter your passphrase to load saved characters. Without it, this app cannot read your saved data.",
+      settings: "Protected saves are locked until you unlock them.",
+    };
+  }
+
+  if (securityState.panelMode === "change") {
+    return {
+      title: "Change save passphrase",
+      body: "Enter a new passphrase. Saved characters stay encrypted at rest in this browser.",
+      settings: "Protected saves are active.",
+    };
+  }
+
+  if (securityState.mode === "unlocked") {
+    return {
+      title: "Protected saves are active",
+      body: "Your saved characters are encrypted in this browser. If you forget the passphrase, the data cannot be recovered.",
+      settings: "Protected saves are active in this browser.",
+    };
+  }
+
+  return {
+    title: "Session-only storage",
+    body: "This app now avoids unprotected persistent saves. Set a passphrase to keep characters encrypted between visits. Until then, changes only last for this browser session.",
+    settings: "Session-only until you set a passphrase.",
+  };
+}
+
+function openSecurityPanel(mode = "setup") {
+  securityState.panelMode = mode;
+  renderSecurityUi();
+  dom.securityPassphrase.focus();
+}
+
+function closeSecurityPanel() {
+  if (securityState.mode === "locked") {
+    return;
+  }
+  securityState.panelMode = null;
+  clearSecurityInputs();
+  renderSecurityUi();
+}
+
+function clearSecurityInputs() {
+  dom.securityPassphrase.value = "";
+  dom.securityPassphraseConfirm.value = "";
+}
+
+function handleSecurityKeydown(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    handleSecurityPrimaryAction();
+  }
+}
+
+async function handleSecurityPrimaryAction() {
+  if (securityState.panelMode === "unlock") {
+    await unlockProtectedSaves();
+    return;
+  }
+
+  if (securityState.panelMode === "change") {
+    await changeSavePassphrase();
+    return;
+  }
+
+  await enableSaveProtection();
+}
+
+function handleSecuritySecondaryAction() {
+  if (securityState.panelMode === "change" || securityState.panelMode === "setup") {
+    closeSecurityPanel();
+  }
 }
 
 function renderSpellSlots() {
@@ -1123,8 +1300,9 @@ function updateInlineComputed() {
 }
 
 function updateHeroBackdrop() {
-  if (state.basics.portraitUrl) {
-    dom.heroBackdrop.style.backgroundImage = `url("${state.basics.portraitUrl}")`;
+  const portraitUrl = sanitizePortraitUrl(state.basics.portraitUrl);
+  if (portraitUrl) {
+    dom.heroBackdrop.style.backgroundImage = `url("${escapeCssUrl(portraitUrl)}")`;
   } else {
     dom.heroBackdrop.style.backgroundImage = "none";
   }
@@ -1498,9 +1676,14 @@ function importPortrait(event) {
   if (!file) {
     return;
   }
+  if (file.size > MAX_PORTRAIT_FILE_BYTES) {
+    window.alert("Use a portrait image smaller than 2 MB.");
+    dom.portraitFile.value = "";
+    return;
+  }
   const reader = new FileReader();
   reader.onload = () => {
-    state.basics.portraitUrl = String(reader.result);
+    state.basics.portraitUrl = sanitizePortraitUrl(String(reader.result));
     syncBoundInputs();
     updateHeroBackdrop();
     scheduleSave();
@@ -1509,39 +1692,284 @@ function importPortrait(event) {
   reader.readAsDataURL(file);
 }
 
+async function encryptSecureState(passphrase, data) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveEncryptionKey(passphrase, salt, ["encrypt"]);
+  const plaintext = new TextEncoder().encode(JSON.stringify(data));
+  const cipherBuffer = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    key,
+    plaintext
+  );
+
+  return {
+    version: 1,
+    iterations: SECURITY_ITERATIONS,
+    salt: bytesToBase64(salt),
+    iv: bytesToBase64(iv),
+    cipherText: bytesToBase64(new Uint8Array(cipherBuffer)),
+  };
+}
+
+async function decryptSecureState(passphrase, envelope) {
+  if (!envelope?.salt || !envelope?.iv || !envelope?.cipherText) {
+    throw new Error("Invalid secure save envelope.");
+  }
+
+  const salt = base64ToBytes(envelope.salt);
+  const iv = base64ToBytes(envelope.iv);
+  const cipherText = base64ToBytes(envelope.cipherText);
+  const key = await deriveEncryptionKey(passphrase, salt, ["decrypt"], envelope.iterations || SECURITY_ITERATIONS);
+  const plaintext = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv },
+    key,
+    cipherText
+  );
+  return JSON.parse(new TextDecoder().decode(plaintext));
+}
+
+async function deriveEncryptionKey(passphrase, salt, usages, iterations = SECURITY_ITERATIONS) {
+  const baseKey = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(passphrase),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+
+  return crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt,
+      iterations,
+      hash: "SHA-256",
+    },
+    baseKey,
+    {
+      name: "AES-GCM",
+      length: 256,
+    },
+    false,
+    usages
+  );
+}
+
 function scheduleSave() {
   window.clearTimeout(saveTimer);
   saveTimer = window.setTimeout(saveState, 140);
 }
 
-function saveState() {
-  localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(appState));
+async function saveState() {
+  try {
+    if (securityState.mode === "locked") {
+      return;
+    }
+
+    if (securityState.mode === "unlocked") {
+      await persistProtectedState(securityState.passphrase);
+      return;
+    }
+
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(snapshotAppState()));
+    clearLegacyPlaintextStorage();
+  } catch (error) {
+    console.error("Could not save sheet state.", error);
+  }
 }
 
 function loadAppState() {
   const defaults = createDefaultAppState();
   try {
+    const secureSaved = localStorage.getItem(SECURE_STORAGE_KEY);
+    if (secureSaved) {
+      securityState.mode = "locked";
+      securityState.panelMode = "unlock";
+      return defaults;
+    }
+
+    const sessionSaved = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (sessionSaved) {
+      securityState.mode = "session";
+      securityState.panelMode = "setup";
+      return hydrateAppState(JSON.parse(sessionSaved));
+    }
+
     const saved = localStorage.getItem(STORAGE_KEY_V2);
     if (saved) {
-      return hydrateAppState(JSON.parse(saved));
+      const migrated = hydrateAppState(JSON.parse(saved));
+      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(migrated));
+      clearLegacyPlaintextStorage();
+      securityState.mode = "session";
+      securityState.panelMode = "setup";
+      return migrated;
     }
 
     const legacy = localStorage.getItem(STORAGE_KEY);
     if (legacy) {
-      const migrated = createProfileWrapper(
-        "My Character",
-        mergeDefaults(createDefaultState(), JSON.parse(legacy))
-      );
-      return {
-        profiles: [migrated],
-        currentProfileId: migrated.id,
-      };
+      const migrated = hydrateAppState({
+        profiles: [
+          createProfileWrapper(
+            "My Character",
+            mergeDefaults(createDefaultState(), JSON.parse(legacy))
+          ),
+        ],
+      });
+      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(migrated));
+      clearLegacyPlaintextStorage();
+      securityState.mode = "session";
+      securityState.panelMode = "setup";
+      return migrated;
     }
 
+    securityState.mode = "session";
+    securityState.panelMode = "setup";
     return defaults;
   } catch (error) {
+    securityState.mode = "session";
+    securityState.panelMode = "setup";
     return defaults;
   }
+}
+
+async function enableSaveProtection() {
+  if (!globalThis.crypto?.subtle) {
+    window.alert("This browser cannot encrypt saved data. Use Export JSON for backups.");
+    return;
+  }
+
+  const passphrase = dom.securityPassphrase.value;
+  const confirmation = dom.securityPassphraseConfirm.value;
+
+  if (!validatePassphrase(passphrase, confirmation)) {
+    return;
+  }
+
+  try {
+    await persistProtectedState(passphrase);
+    securityState.mode = "unlocked";
+    securityState.panelMode = null;
+    securityState.passphrase = passphrase;
+    clearSecurityInputs();
+    renderSecurityUi();
+  } catch (error) {
+    console.error("Could not protect saved characters.", error);
+    window.alert("Could not protect saves in this browser. Try a smaller portrait image or use Export JSON.");
+  }
+}
+
+async function unlockProtectedSaves() {
+  const passphrase = dom.securityPassphrase.value;
+  if (!passphrase) {
+    window.alert("Enter your passphrase to unlock saved characters.");
+    return;
+  }
+
+  try {
+    const envelope = readSecureEnvelope();
+    if (!envelope) {
+      throw new Error("No protected save found.");
+    }
+    appState = hydrateAppState(await decryptSecureState(passphrase, envelope));
+    securityState.mode = "unlocked";
+    securityState.panelMode = null;
+    securityState.passphrase = passphrase;
+    clearSecurityInputs();
+    syncCurrentStateRef();
+    renderAll();
+  } catch (error) {
+    window.alert("Could not unlock saved characters. Check the passphrase and try again.");
+  }
+}
+
+async function changeSavePassphrase() {
+  const passphrase = dom.securityPassphrase.value;
+  const confirmation = dom.securityPassphraseConfirm.value;
+
+  if (!validatePassphrase(passphrase, confirmation)) {
+    return;
+  }
+
+  try {
+    await persistProtectedState(passphrase);
+    securityState.passphrase = passphrase;
+    securityState.panelMode = null;
+    clearSecurityInputs();
+    renderSecurityUi();
+  } catch (error) {
+    console.error("Could not update the save passphrase.", error);
+    window.alert("Could not update the passphrase. Try a smaller portrait image or use Export JSON.");
+  }
+}
+
+async function lockProtectedSaves() {
+  if (securityState.mode !== "unlocked") {
+    return;
+  }
+  window.clearTimeout(saveTimer);
+  try {
+    await persistProtectedState(securityState.passphrase);
+  } catch (error) {
+    console.error("Could not lock protected saves.", error);
+    window.alert("Could not lock saves cleanly. Try again or use Export JSON first.");
+    return;
+  }
+  securityState.mode = "locked";
+  securityState.panelMode = "unlock";
+  securityState.passphrase = "";
+  appState = createDefaultAppState();
+  syncCurrentStateRef();
+  clearSecurityInputs();
+  renderAll();
+}
+
+async function persistProtectedState(passphrase) {
+  const envelope = await encryptSecureState(passphrase, snapshotAppState());
+  localStorage.setItem(SECURE_STORAGE_KEY, JSON.stringify(envelope));
+  sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  clearLegacyPlaintextStorage();
+}
+
+function clearLegacyPlaintextStorage() {
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(STORAGE_KEY_V2);
+}
+
+function readSecureEnvelope() {
+  const raw = localStorage.getItem(SECURE_STORAGE_KEY);
+  return raw ? JSON.parse(raw) : null;
+}
+
+function validatePassphrase(passphrase, confirmation) {
+  if (!passphrase || passphrase.length < 8) {
+    window.alert("Use a passphrase with at least 8 characters.");
+    return false;
+  }
+  if (passphrase !== confirmation) {
+    window.alert("The passphrase and confirmation do not match.");
+    return false;
+  }
+  return true;
+}
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+function base64ToBytes(value) {
+  const binary = atob(value);
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+function snapshotAppState() {
+  if (typeof structuredClone === "function") {
+    return structuredClone(appState);
+  }
+  return JSON.parse(JSON.stringify(appState));
 }
 
 function createDefaultAppState() {
@@ -1937,15 +2365,29 @@ function getCollection(path) {
 
 function rollFormula(formula) {
   const input = formula.toLowerCase().replace(/\s+/g, "");
+  if (!input || input.length > MAX_FORMULA_LENGTH) {
+    throw new Error(`Keep formulas under ${MAX_FORMULA_LENGTH} characters.`);
+  }
+
+  if (!/^[+\-0-9d]+$/.test(input)) {
+    throw new Error("Use formulas like 1d20+5 or 2d6+3.");
+  }
+
   const pattern = /([+-]?)(\d*d\d+|\d+)/g;
   let cursor = 0;
   let total = 0;
+  let termCount = 0;
+  let totalDice = 0;
   const breakdown = [];
 
   while (cursor < input.length) {
     const match = pattern.exec(input);
     if (!match || match.index !== cursor) {
       throw new Error("Use formulas like 1d20+5 or 2d6+3.");
+    }
+    termCount += 1;
+    if (termCount > MAX_FORMULA_TERMS) {
+      throw new Error(`Use no more than ${MAX_FORMULA_TERMS} terms in one formula.`);
     }
 
     const sign = match[1] === "-" ? -1 : 1;
@@ -1955,17 +2397,31 @@ function rollFormula(formula) {
       const [countRaw, sidesRaw] = term.split("d");
       const count = Number(countRaw || 1);
       const sides = Number(sidesRaw);
+      if (!Number.isInteger(count) || count < 1 || count > MAX_DICE_COUNT) {
+        throw new Error(`Each dice term must roll between 1 and ${MAX_DICE_COUNT} dice.`);
+      }
+      if (!Number.isInteger(sides) || sides < 1 || sides > MAX_DIE_SIDES) {
+        throw new Error(`Dice can have between 1 and ${MAX_DIE_SIDES} sides.`);
+      }
+      totalDice += count;
+      if (totalDice > MAX_DICE_COUNT) {
+        throw new Error(`Roll no more than ${MAX_DICE_COUNT} dice total in one formula.`);
+      }
       const rolls = Array.from({ length: count }, () => rollDie(sides));
       const subtotal = rolls.reduce((sum, value) => sum + value, 0) * sign;
       total += subtotal;
       breakdown.push(`${sign < 0 ? "-" : cursor === 0 ? "" : "+"}${count}d${sides}[${rolls.join(",")}]`);
     } else {
-      const value = Number(term) * sign;
+      const numericTerm = Number(term);
+      if (!Number.isInteger(numericTerm) || numericTerm > MAX_FLAT_BONUS) {
+        throw new Error(`Flat bonuses must stay at or below ${MAX_FLAT_BONUS}.`);
+      }
+      const value = numericTerm * sign;
       total += value;
       breakdown.push(`${sign < 0 ? "" : cursor === 0 ? "" : "+"}${value}`);
     }
 
-    cursor += match[0].length;
+    cursor = pattern.lastIndex;
   }
 
   return {
@@ -2236,6 +2692,7 @@ function importProfile(parsed) {
 
 function normalizeState(inputState) {
   const normalized = mergeDefaults(createDefaultState(), inputState);
+  normalized.basics.portraitUrl = sanitizePortraitUrl(normalized.basics.portraitUrl);
   normalized.attacks = (normalized.attacks || []).map((attack) => ({
     ...createAttack(),
     ...attack,
@@ -2271,6 +2728,42 @@ function normalizeState(inputState) {
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function sanitizePortraitUrl(value) {
+  if (!value) {
+    return "";
+  }
+
+  const raw = String(value).trim();
+  if (!raw) {
+    return "";
+  }
+
+  if (raw.startsWith("data:image/")) {
+    return raw;
+  }
+
+  try {
+    const parsed = new URL(raw, window.location.href);
+    if (parsed.protocol === "blob:" && parsed.origin === window.location.origin) {
+      return parsed.href;
+    }
+    if (
+      (parsed.protocol === "http:" || parsed.protocol === "https:") &&
+      parsed.origin === window.location.origin
+    ) {
+      return parsed.href;
+    }
+  } catch (error) {
+    return "";
+  }
+
+  return "";
+}
+
+function escapeCssUrl(value) {
+  return String(value).replace(/["\\\n\r]/g, "");
 }
 
 function getAbilityLabel(key) {
