@@ -580,7 +580,7 @@ textarea {
 }
 
 .list-row.compact-row {
-  grid-template-columns: minmax(100px, 1fr) minmax(0, 120px) minmax(0, 100px) minmax(0, 80px) 70px auto;
+  grid-template-columns: minmax(100px, 1.2fr) minmax(90px, 1fr) minmax(80px, 1fr) minmax(60px, 0.6fr) 70px auto;
 }
 
 .list-row.prof-row {
