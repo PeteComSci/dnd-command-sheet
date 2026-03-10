@@ -3,6 +3,7 @@ const STORAGE_KEY_V2 = "dnd-command-sheet.v2";
 const SECURE_STORAGE_KEY = "dnd-command-sheet.secure.v1";
 const SESSION_STORAGE_KEY = "dnd-command-sheet.session.v1";
 const INSTALL_NOTE_KEY = "dnd-command-sheet.install-note.dismissed";
+const ONBOARDING_KEY = "dnd-command-sheet.onboarding.dismissed";
 const SECURITY_ITERATIONS = 250000;
 const MAX_FORMULA_LENGTH = 60;
 const MAX_FORMULA_TERMS = 20;
@@ -106,6 +107,34 @@ const ENCUMBRANCE_OPTIONS = [
   { value: "off", label: "Disabled" },
 ];
 
+const HELP_TOOLTIPS = {
+  "save-protection": "Encrypts your character data with a passphrase so it stays private in your browser. Without this, data is stored in plain text in localStorage.",
+  "encumbrance-mode": "Variant 5e uses three tiers (encumbered, heavily, over-capacity). Simple Capacity just checks total vs. carrying capacity. Disabled hides weight tracking.",
+  "proficiency-bonus": "Auto-calculated from level: +2 at levels 1\u20134, scaling to +6 at 17\u201320. Override it in Basics if your campaign uses custom values.",
+  "short-rest": "Resets per-short-rest custom resources. Does not touch HP, spell slots, or death saves \u2014 manage those manually.",
+  "long-rest": "Resets HP to max, clears temp HP, resets death saves, restores all spell slots, recovers half your hit dice (round down, minimum 1), and resets all custom resources.",
+  "death-saves": "Track three successes or three failures. Click dots to toggle. Long Rest resets both rows to zero.",
+  "spell-attack": "Calculated as: spellcasting ability modifier + proficiency bonus + spell attack bonus (extra). Set your casting ability and any bonus in the fields above.",
+  "spell-save-dc": "Calculated as: 8 + spellcasting ability modifier + proficiency bonus + spell save DC bonus. Set your casting ability and any bonus in the fields above.",
+};
+
+const HELP_FAQ = [
+  { q: "Where is my data stored?", a: "Everything is saved in your browser\u2019s localStorage. Nothing is sent to a server. If you clear browser data, your characters are lost \u2014 use Export JSON to back up." },
+  { q: "Can multiple people use this?", a: "Yes! Each browser profile has its own storage. Use different browser profiles or devices for separate players. You can also use Character Slots to manage multiple characters in one browser." },
+  { q: "What happens if I clear my browser?", a: "All character data is erased. Always export a JSON backup before clearing site data or switching browsers." },
+  { q: "How does encryption work?", a: "When you set a passphrase, your character data is encrypted with AES-GCM via the Web Crypto API before being stored. The passphrase is never stored \u2014 you must enter it each session." },
+  { q: "How do I back up my characters?", a: "Click Export JSON in the header. This downloads a file you can later import on any device using Import JSON." },
+  { q: "Can I install this on my phone?", a: "Yes! On iOS Safari use Share \u2192 Add to Home Screen. On Android Chrome tap the install banner or menu \u2192 Install App. It works offline once installed." },
+  { q: "How do dice rolls work?", a: "Use the Roller section at the bottom. Type a formula like 2d6+3 or use the quick-roll buttons. Click any Check, Save, or Attack button to auto-roll with that modifier." },
+];
+
+const ONBOARDING_STEPS = [
+  { title: "Welcome to DnD Command Sheet", body: "A private, offline-friendly character sheet that lives entirely in your browser. No accounts, no servers \u2014 your data stays on your device." },
+  { title: "Feature Highlights", body: "Auto-calculated modifiers and spell DCs \u2022 Multiple character slots \u2022 Short & Long Rest automation \u2022 Built-in dice roller \u2022 Customizable themes \u2022 Optional AES encryption \u2022 Works offline as a PWA" },
+  { title: "Managing Characters", body: "Use Character Slot in the header to switch between characters. Duplicate, rename, or delete from the Customize panel. Export JSON to back up, Import JSON to restore." },
+  { title: "Getting Started", body: "Fill in your character\u2019s name, class, and level in the Basics section. Set ability scores and the modifiers will auto-calculate. Look for the ? icons throughout the sheet for tips on specific features." },
+];
+
 const PROFICIENCY_TYPES = ["Armor", "Weapon", "Tool", "Language", "Other"];
 const SPELL_LEVEL_OPTIONS = Array.from({ length: 10 }, (_, index) => index);
 const SPELL_SLOT_LEVELS = Array.from({ length: 9 }, (_, index) => index + 1);
@@ -120,6 +149,11 @@ let appState = loadAppState();
 let state = getCurrentProfileState();
 let saveTimer = null;
 let settingsOpen = false;
+let settingsReturnFocus = null;
+let helpOpen = false;
+let helpReturnFocus = null;
+let onboardingStep = 0;
+let activeTooltip = null;
 let deferredInstallPrompt = null;
 
 init();
@@ -131,6 +165,8 @@ function init() {
   renderAll();
   renderSecurityUi();
   setupPwa();
+  renderHelpPanel();
+  checkOnboarding();
 }
 
 function cacheDom() {
@@ -171,6 +207,14 @@ function cacheDom() {
   dom.securitySettingsStatus = document.getElementById("security-settings-status");
   dom.manageSecurity = document.getElementById("manage-security");
   dom.lockApp = document.getElementById("lock-app");
+  dom.helpDrawer = document.getElementById("help-drawer");
+  dom.helpFaqList = document.getElementById("help-faq-list");
+  dom.helpFab = document.getElementById("help-fab");
+  dom.onboardingOverlay = document.getElementById("onboarding-overlay");
+  dom.onboardingModal = document.getElementById("onboarding-modal");
+  dom.onboardingContent = document.getElementById("onboarding-content");
+  dom.onboardingDots = document.getElementById("onboarding-dots");
+  dom.onboardingNext = document.getElementById("onboarding-next");
 }
 
 function populateStaticSelects() {
@@ -225,8 +269,33 @@ function bindEvents() {
   dom.securityPassphrase.addEventListener("keydown", handleSecurityKeydown);
   dom.securityPassphraseConfirm.addEventListener("keydown", handleSecurityKeydown);
 
+  document.addEventListener("focusin", (event) => {
+    const trigger = event.target.closest("[data-tooltip]");
+    if (trigger) toggleTooltip(trigger);
+  });
+  document.addEventListener("focusout", (event) => {
+    if (event.target.closest("[data-tooltip]")) dismissActiveTooltip();
+  });
+  document.addEventListener("pointerenter", (event) => {
+    const trigger = event.target.closest("[data-tooltip]");
+    if (trigger && window.matchMedia("(hover: hover)").matches) toggleTooltip(trigger);
+  }, true);
+  document.addEventListener("pointerleave", (event) => {
+    if (event.target.closest("[data-tooltip]") && window.matchMedia("(hover: hover)").matches) dismissActiveTooltip();
+  }, true);
+
   window.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && settingsOpen) {
+    if (event.key !== "Escape") return;
+    dismissActiveTooltip();
+    if (!dom.onboardingModal.classList.contains("is-hidden")) {
+      dismissOnboarding();
+      return;
+    }
+    if (helpOpen) {
+      toggleHelp(false);
+      return;
+    }
+    if (settingsOpen) {
       toggleSettings(false);
     }
   });
@@ -435,6 +504,48 @@ function handleClickEvent(event) {
     return;
   }
 
+  if (event.target.closest("#help-fab")) {
+    toggleHelp(true);
+    return;
+  }
+
+  if (event.target.closest("#close-help")) {
+    toggleHelp(false);
+    return;
+  }
+
+  if (event.target.closest("#replay-onboarding")) {
+    toggleHelp(false);
+    showOnboarding();
+    return;
+  }
+
+  if (event.target.closest("#onboarding-next")) {
+    advanceOnboarding();
+    return;
+  }
+
+  if (event.target.closest("#onboarding-skip") || event.target.closest("#onboarding-overlay")) {
+    dismissOnboarding();
+    return;
+  }
+
+  const faqQuestion = event.target.closest(".faq-question");
+  if (faqQuestion) {
+    faqQuestion.closest(".faq-item").classList.toggle("open");
+    return;
+  }
+
+  const tooltipTrigger = event.target.closest("[data-tooltip]");
+  if (tooltipTrigger) {
+    toggleTooltip(tooltipTrigger);
+    return;
+  }
+
+  if (activeTooltip && !event.target.closest(".tooltip-bubble")) {
+    dismissActiveTooltip();
+  }
+
   const quickRoll = event.target.closest("[data-roll]");
   if (quickRoll) {
     const formula = quickRoll.dataset.roll;
@@ -461,6 +572,7 @@ function handleClickEvent(event) {
   const skillRoll = event.target.closest("[data-roll-skill]");
   if (skillRoll) {
     const skill = getSkillDefinition(skillRoll.dataset.rollSkill);
+    if (!skill) return;
     performRoll(
       buildD20Formula(getSkillTotal(skill.key)),
       `${skill.label} (${getAbilityLabel(skill.ability)})`
@@ -1179,6 +1291,7 @@ function renderFeatures() {
                 data-field="name"
                 value="${escapeHtml(feature.name)}"
                 placeholder="Feature name"
+                aria-label="Feature name"
               />
               <span class="tag">${escapeHtml(feature.source || "Custom")}</span>
             </div>
@@ -1317,7 +1430,7 @@ function renderRollLog() {
             <span class="label">${escapeHtml(entry.label)}</span>
             <div>${escapeHtml(entry.formula)} • ${escapeHtml(entry.breakdown)}</div>
           </div>
-          <strong>${entry.total}</strong>
+          <strong>${escapeHtml(String(entry.total))}</strong>
         </div>
       `
     )
@@ -1376,9 +1489,128 @@ function applyThemePreset(key) {
 }
 
 function toggleSettings(open) {
+  if (open && helpOpen) toggleHelp(false);
   settingsOpen = open;
   dom.settingsDrawer.classList.toggle("open", open);
   dom.settingsDrawer.setAttribute("aria-hidden", String(!open));
+  if (open) {
+    settingsReturnFocus = document.activeElement;
+    const firstInput = dom.settingsDrawer.querySelector("input, select, button");
+    if (firstInput) firstInput.focus();
+  } else if (settingsReturnFocus) {
+    settingsReturnFocus.focus();
+    settingsReturnFocus = null;
+  }
+}
+
+function toggleHelp(open) {
+  if (open && settingsOpen) toggleSettings(false);
+  helpOpen = open;
+  dom.helpDrawer.classList.toggle("open", open);
+  dom.helpDrawer.setAttribute("aria-hidden", String(!open));
+  if (open) {
+    helpReturnFocus = document.activeElement;
+    const firstBtn = dom.helpDrawer.querySelector("button");
+    if (firstBtn) firstBtn.focus();
+  } else if (helpReturnFocus) {
+    helpReturnFocus.focus();
+    helpReturnFocus = null;
+  }
+}
+
+function renderHelpPanel() {
+  dom.helpFaqList.innerHTML = HELP_FAQ.map(
+    (entry) =>
+      `<div class="faq-item">
+        <button type="button" class="faq-question">${escapeHtml(entry.q)}</button>
+        <div class="faq-answer">${escapeHtml(entry.a)}</div>
+      </div>`
+  ).join("");
+}
+
+function checkOnboarding() {
+  try {
+    if (!localStorage.getItem(ONBOARDING_KEY)) {
+      showOnboarding();
+    }
+  } catch (_) {}
+}
+
+function showOnboarding() {
+  onboardingStep = 0;
+  dom.onboardingOverlay.classList.remove("is-hidden");
+  dom.onboardingModal.classList.remove("is-hidden");
+  renderOnboardingStep();
+}
+
+function dismissOnboarding() {
+  dom.onboardingOverlay.classList.add("is-hidden");
+  dom.onboardingModal.classList.add("is-hidden");
+  try {
+    localStorage.setItem(ONBOARDING_KEY, "1");
+  } catch (_) {}
+}
+
+function advanceOnboarding() {
+  if (onboardingStep < ONBOARDING_STEPS.length - 1) {
+    onboardingStep++;
+    renderOnboardingStep();
+  } else {
+    dismissOnboarding();
+  }
+}
+
+function renderOnboardingStep() {
+  const step = ONBOARDING_STEPS[onboardingStep];
+  dom.onboardingContent.innerHTML =
+    `<h2>${escapeHtml(step.title)}</h2><p>${escapeHtml(step.body)}</p>`;
+  dom.onboardingDots.innerHTML = ONBOARDING_STEPS.map(
+    (_, i) => `<span class="onboarding-dot${i === onboardingStep ? " active" : ""}"></span>`
+  ).join("");
+  const isLast = onboardingStep === ONBOARDING_STEPS.length - 1;
+  dom.onboardingNext.textContent = isLast ? "Get Started" : "Next";
+}
+
+function toggleTooltip(trigger) {
+  if (activeTooltip && activeTooltip.trigger === trigger) {
+    dismissActiveTooltip();
+    return;
+  }
+  dismissActiveTooltip();
+  const key = trigger.dataset.tooltip;
+  const text = HELP_TOOLTIPS[key];
+  if (!text) return;
+
+  trigger.style.position = trigger.style.position || "relative";
+  const wrapper = trigger.parentElement;
+  if (wrapper && getComputedStyle(wrapper).position === "static") {
+    wrapper.style.position = "relative";
+  }
+
+  const bubble = document.createElement("div");
+  bubble.className = "tooltip-bubble";
+  bubble.textContent = text;
+  trigger.parentElement.appendChild(bubble);
+
+  const rect = bubble.getBoundingClientRect();
+  if (rect.top < 8) {
+    bubble.classList.add("flip-up");
+  }
+  const overflowRight = rect.right - window.innerWidth + 8;
+  const overflowLeft = 8 - rect.left;
+  if (overflowRight > 0) {
+    bubble.style.transform = `translateX(calc(-50% - ${overflowRight}px))`;
+  } else if (overflowLeft > 0) {
+    bubble.style.transform = `translateX(calc(-50% + ${overflowLeft}px))`;
+  }
+
+  activeTooltip = { trigger, bubble };
+}
+
+function dismissActiveTooltip() {
+  if (!activeTooltip) return;
+  activeTooltip.bubble.remove();
+  activeTooltip = null;
 }
 
 function setupPwa() {
@@ -1668,6 +1900,10 @@ function importFromFile(event) {
       dom.importFile.value = "";
     }
   };
+  reader.onerror = () => {
+    window.alert("Could not read that file.");
+    dom.importFile.value = "";
+  };
   reader.readAsText(file);
 }
 
@@ -1687,6 +1923,10 @@ function importPortrait(event) {
     syncBoundInputs();
     updateHeroBackdrop();
     scheduleSave();
+    dom.portraitFile.value = "";
+  };
+  reader.onerror = () => {
+    window.alert("Could not read that image.");
     dom.portraitFile.value = "";
   };
   reader.readAsDataURL(file);
@@ -2265,7 +2505,9 @@ function getDerived() {
 }
 
 function getAbilityModifier(key) {
-  return Math.floor((numberValue(state.abilities[key].score, 10) - 10) / 2);
+  const ability = state.abilities[key];
+  if (!ability) return 0;
+  return Math.floor((numberValue(ability.score, 10) - 10) / 2);
 }
 
 function getSavingThrowTotal(key) {
@@ -2330,9 +2572,6 @@ function getTotalWeight() {
 
 function getCapacity() {
   const strength = numberValue(state.abilities.strength.score, 10);
-  if (state.ui.encumbranceMode === "off") {
-    return strength * 15;
-  }
   return strength * 15;
 }
 
@@ -2431,7 +2670,9 @@ function rollFormula(formula) {
 }
 
 function rollDie(sides) {
-  return Math.floor(Math.random() * sides) + 1;
+  const array = new Uint32Array(1);
+  crypto.getRandomValues(array);
+  return (array[0] % sides) + 1;
 }
 
 function readInputValue(element) {
@@ -2459,7 +2700,8 @@ function getPath(object, path) {
 function setPath(object, path, value) {
   const keys = path.split(".");
   const last = keys.pop();
-  const target = keys.reduce((result, key) => result[key], object);
+  const target = keys.reduce((result, key) => result?.[key], object);
+  if (target == null) return;
   target[last] = value;
 }
 
@@ -2664,6 +2906,9 @@ function renameCurrentProfile() {
 
 function importProfile(parsed) {
   if (parsed && Array.isArray(parsed.profiles) && parsed.currentProfileId) {
+    if (!window.confirm("This file contains multiple characters and will replace all current slots. Continue?")) {
+      return;
+    }
     appState = hydrateAppState(parsed);
     syncCurrentStateRef();
     renderAll();
@@ -2692,7 +2937,11 @@ function importProfile(parsed) {
 
 function normalizeState(inputState) {
   const normalized = mergeDefaults(createDefaultState(), inputState);
-  normalized.basics.portraitUrl = sanitizePortraitUrl(normalized.basics.portraitUrl);
+  const rawPortraitUrl = normalized.basics.portraitUrl;
+  normalized.basics.portraitUrl = sanitizePortraitUrl(rawPortraitUrl);
+  if (rawPortraitUrl && !normalized.basics.portraitUrl) {
+    console.warn("Portrait URL was removed because it does not meet security requirements.");
+  }
   normalized.attacks = (normalized.attacks || []).map((attack) => ({
     ...createAttack(),
     ...attack,

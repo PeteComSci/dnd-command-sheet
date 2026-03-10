@@ -1,4 +1,4 @@
-const CACHE_NAME = "dnd-command-sheet-v3";
+const CACHE_NAME = "dnd-command-sheet-v5";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -14,9 +14,10 @@ const APP_SHELL = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
@@ -44,7 +45,7 @@ self.addEventListener("fetch", (event) => {
 
   if (event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match("./index.html"))
+      fetch(event.request).catch(() => caches.match(new URL("./index.html", self.location.href).href))
     );
     return;
   }

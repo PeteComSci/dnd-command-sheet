@@ -82,13 +82,13 @@
       <div class="security-note panel" id="security-note">
         <div class="security-copy">
           <p class="eyebrow">Secure Saves</p>
-          <strong id="security-note-title">Save protection</strong>
+          <strong id="security-note-title">Save protection</strong> <button type="button" class="tooltip-trigger" data-tooltip="save-protection" aria-label="Help: save protection">?</button>
           <p id="security-note-body">Set a passphrase to keep saved characters encrypted between visits.</p>
         </div>
         <div class="security-controls">
           <label id="security-passphrase-label">
             <span>Passphrase</span>
-            <input type="password" id="security-passphrase" autocomplete="current-password" />
+            <input type="password" id="security-passphrase" autocomplete="new-password" />
           </label>
           <label id="security-confirm-label">
             <span>Confirm Passphrase</span>
@@ -177,8 +177,8 @@
                 <h2>Combat & Vitals</h2>
               </div>
               <div class="inline-actions">
-                <button type="button" class="btn subtle" id="short-rest">Short Rest</button>
-                <button type="button" class="btn subtle" id="long-rest">Long Rest</button>
+                <button type="button" class="btn subtle" id="short-rest">Short Rest</button> <button type="button" class="tooltip-trigger" data-tooltip="short-rest" aria-label="Help: short rest">?</button>
+                <button type="button" class="btn subtle" id="long-rest">Long Rest</button> <button type="button" class="tooltip-trigger" data-tooltip="long-rest" aria-label="Help: long rest">?</button>
               </div>
             </div>
             <div class="combat-grid">
@@ -233,7 +233,7 @@
             </div>
             <div class="summary-strip">
               <article>
-                <span class="label">Proficiency Bonus</span>
+                <span class="label">Proficiency Bonus</span> <button type="button" class="tooltip-trigger" data-tooltip="proficiency-bonus" aria-label="Help: proficiency bonus">?</button>
                 <strong data-display="derived.proficiencyBonus">+2</strong>
               </article>
               <article>
@@ -241,7 +241,7 @@
                 <strong data-display="derived.initiative">+0</strong>
               </article>
               <article>
-                <span class="label">Death Saves</span>
+                <span class="label">Death Saves</span> <button type="button" class="tooltip-trigger" data-tooltip="death-saves" aria-label="Help: death saves">?</button>
                 <strong data-display="derived.deathSaves">0 / 0</strong>
               </article>
               <article>
@@ -300,11 +300,11 @@
             </div>
             <div class="summary-strip">
               <article>
-                <span class="label">Spell Attack</span>
+                <span class="label">Spell Attack</span> <button type="button" class="tooltip-trigger" data-tooltip="spell-attack" aria-label="Help: spell attack">?</button>
                 <strong data-display="derived.spellAttack">+0</strong>
               </article>
               <article>
-                <span class="label">Spell Save DC</span>
+                <span class="label">Spell Save DC</span> <button type="button" class="tooltip-trigger" data-tooltip="spell-save-dc" aria-label="Help: spell save DC">?</button>
                 <strong data-display="derived.spellSaveDc">10</strong>
               </article>
             </div>
@@ -435,7 +435,7 @@
       </main>
     </div>
 
-    <aside class="settings-drawer" id="settings-drawer" aria-hidden="true">
+    <aside class="settings-drawer" id="settings-drawer" role="dialog" aria-modal="true" aria-label="Sheet customization settings" aria-hidden="true">
       <div class="drawer-header">
         <div>
           <p class="eyebrow">Customization</p>
@@ -463,7 +463,7 @@
             <input type="range" min="90" max="120" step="1" data-path="ui.fontScale" />
           </label>
           <label>
-            <span>Encumbrance</span>
+            <span>Encumbrance</span> <button type="button" class="tooltip-trigger" data-tooltip="encumbrance-mode" aria-label="Help: encumbrance mode">?</button>
             <select data-path="ui.encumbranceMode" id="encumbrance-mode"></select>
           </label>
           <label class="checkbox">
@@ -490,6 +490,34 @@
           <button type="button" class="btn subtle wide" id="rename-profile">Rename Current Character</button>
           <button type="button" class="btn subtle wide" id="clear-sheet">Reset To Blank Sheet</button>
         </section>
+      </div>
+    </aside>
+
+    <aside class="help-drawer" id="help-drawer" role="dialog" aria-modal="true" aria-label="Help and FAQ" aria-hidden="true">
+      <div class="drawer-header">
+        <div>
+          <p class="eyebrow">Reference</p>
+          <h2>Help & FAQ</h2>
+        </div>
+        <button type="button" class="icon-btn" id="close-help" aria-label="Close help panel">&#10005;</button>
+      </div>
+      <div class="drawer-content">
+        <div id="help-faq-list"></div>
+        <div class="help-footer">
+          <button type="button" class="btn subtle wide" id="replay-onboarding">Replay Welcome Tour</button>
+        </div>
+      </div>
+    </aside>
+
+    <button type="button" class="help-fab" id="help-fab" aria-label="Open help">?</button>
+
+    <div class="onboarding-overlay is-hidden" id="onboarding-overlay"></div>
+    <aside class="onboarding-modal is-hidden" id="onboarding-modal" role="dialog" aria-modal="true" aria-label="Welcome tour">
+      <div class="onboarding-content" id="onboarding-content"></div>
+      <div class="onboarding-dots" id="onboarding-dots"></div>
+      <div class="onboarding-actions">
+        <button type="button" class="btn subtle" id="onboarding-skip">Skip</button>
+        <button type="button" class="btn" id="onboarding-next">Next</button>
       </div>
     </aside>
 
