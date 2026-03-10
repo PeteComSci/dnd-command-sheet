@@ -4,14 +4,9 @@ Interactive offline-first Dungeons & Dragons character sheet built as a static w
 
 Live app: https://petecomsci.github.io/dnd-command-sheet/
 
-## Open It
-
-- Double-click `index.html`, or
-- In the project folder, run `python3 -m http.server 4173` and open `http://127.0.0.1:4173`
-
 ## Simple User Guide
 
-1. Open the app in your browser: `https://petecomsci.github.io/dnd-command-sheet/`
+1. Open the app: https://petecomsci.github.io/dnd-command-sheet/
 2. Fill in your character name, class, level, race, background, and alignment.
 3. Enter your ability scores. The app will calculate the modifiers for you.
 4. Mark your saving throws, skills, attacks, spell slots, items, resources, and features.
