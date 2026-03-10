@@ -1,115 +1,113 @@
 # DnD Command Sheet
 
-Interactive offline-first Dungeons & Dragons character sheet built as a static web app.
+Interactive offline-first Dungeons & Dragons 5e character sheet built as a static web app. No accounts, no servers — your data stays in your browser.
 
-Live app: https://petecomsci.github.io/dnd-command-sheet/
+**Live app:** https://petecomsci.github.io/dnd-command-sheet/
 
-## Simple User Guide
-
-1. Open the app: https://petecomsci.github.io/dnd-command-sheet/
-2. Fill in your character name, class, level, race, background, and alignment.
-3. Enter your ability scores. The app will calculate the modifiers for you.
-4. Mark your saving throws, skills, attacks, spell slots, items, resources, and features.
-5. Your data saves automatically in the browser. For extra privacy on shared devices, set a passphrase in `Customize` -> `Security`.
-6. Use `Export JSON` to save a backup of the current character, or `Export All` to back up all characters at once.
-7. During a game, use the `Roll` buttons, `Short Rest`, `Long Rest`, and the dice roller to update your sheet quickly.
-8. If you want the app on your phone, open the hosted site and install it from your browser menu or the in-app install button.
-
-### Phone install steps
-
-#### Android
-
-1. Open `https://petecomsci.github.io/dnd-command-sheet/` in Chrome.
-2. Let the page load fully once.
-3. Tap `Install App` if the button appears.
-4. If the button does not appear, open the Chrome menu.
-5. Tap `Install app` or `Add to Home screen`.
-
-#### iPhone or iPad
-
-1. Open `https://petecomsci.github.io/dnd-command-sheet/` in Safari.
-2. Let the page load fully once.
-3. Tap the `Share` button.
-4. Tap `Add to Home Screen`.
-5. Tap `Add`.
-
-### Simple tips
-
-- Use `New Character` if you want a fresh sheet.
-- Use `Duplicate` if you want to copy an existing character.
-- Use `Load Demo` if you want to see a finished example first.
-- Use `Upload Portrait` instead of pasting image links.
-- Use `Export All` to back up all characters at once.
-- If you clear your browser data, use your exported backup to restore characters.
-
-## Mobile Install
-
-- Install support is built in as a Progressive Web App.
-- For Android/Chrome-class browsers, use the in-app `Install App` button when it appears.
-- For iPhone/iPad, open the hosted app in Safari, tap `Share`, then `Add to Home Screen`.
-- Service worker caching enables offline reuse after the first successful load.
-- Installation requires `https://` hosting or `localhost`. A raw `file://` open is fine for desktop use, but it is not installable.
-
-## Save Security
-
-- Character data is saved automatically in your browser's local storage. Your characters persist between visits.
-- For extra privacy on shared devices, open `Customize` -> `Security` and set a passphrase. This encrypts your data before storing it.
-- If you forget the passphrase, the encrypted save cannot be recovered.
-- `Export JSON` and `Export All` are the safest backup options before major edits or clearing browser data.
-
-## Deploy To GitHub Pages
-
-This project is already set up for GitHub Pages with the workflow in `.github/workflows/deploy-pages.yml`.
-
-### Simple setup
-
-1. Create a new GitHub repository.
-2. Make the repository `Public` if you want free GitHub Pages on a GitHub Free account.
-3. Upload everything from this folder to the repository root.
-4. Push to the `main` branch.
-5. In GitHub, open `Settings` -> `Pages`.
-6. Under `Build and deployment`, set `Source` to `GitHub Actions` if it is not already selected.
-7. Open the `Actions` tab and wait for `Deploy GitHub Pages` to finish.
-8. Your site will be available at:
-   `https://YOUR-USERNAME.github.io/YOUR-REPOSITORY-NAME/`
-
-### If you want to use git from Terminal
-
-```bash
-cd /path/to/your/project
-git init
-git branch -M main
-git add .
-git commit -m "Add DnD character sheet app"
-git remote add origin https://github.com/YOUR-USERNAME/YOUR-REPOSITORY-NAME.git
-git push -u origin main
-```
-
-### Important notes
-
-- The app is static, so GitHub Pages can host it without a build step.
-- The PWA install feature works on GitHub Pages because Pages serves over `https://`.
-- If you update the app later, just push to `main` again.
-- The install prompt may appear only after the page has been visited once and meets the browser's install rules.
-- For privacy, avoid adding remote portrait image URLs. Use uploaded portraits instead.
-
-## Included
+## Features
 
 - Character identity, class, race, alignment, XP, player, campaign, and portrait
 - All six abilities with automatic modifiers and configurable saving throw training
 - Skills with proficiency or expertise, misc bonuses, and one-click rolls
 - AC, initiative, speed, hit points, hit dice, death saves, rest buttons, and custom resources with +/- buttons
-- Attacks with hit and damage roll buttons, spellcasting ability, spell save DC, spell attack, spell slots, and spellbook entries
-- Dice roller with d4, d6, d8, d10, d12, d20, and custom formulas; timestamped roll log with clear
-- Inventory, currency, carrying weight, encumbrance tracking, proficiencies, languages, and custom checks
-- Features and traits with filtering and active filter indicator
+- Attacks with hit and damage roll buttons, spellcasting, spell save DC, spell attack, spell slots, and spellbook
+- Dice roller with d4, d6, d8, d10, d12, d20, and custom formulas; timestamped roll log
+- Inventory, currency, carrying weight, encumbrance, proficiencies, languages, and custom checks
+- Features and traits with search filtering
 - Multiple character slots with duplicate, rename, and delete
-- Theme presets, color customization, compact mode, section visibility toggles
+- Theme presets, color customization, compact mode, and section visibility toggles
 - Import/export JSON (single character or all characters), print-friendly layout
-- Automatic local storage saves with optional passphrase encryption for shared devices
+- Automatic local storage saves with optional passphrase encryption
 - Onboarding walkthrough, contextual tooltips, and FAQ help system
-- Installable as a Progressive Web App with offline support
+- Installable as a Progressive Web App with full offline support
 
-## Demo
+## Getting Started
 
-Use `Load Demo` to preload the Theron Vaelmont example character.
+1. Open the app: https://petecomsci.github.io/dnd-command-sheet/
+2. Fill in your character name, class, level, race, background, and alignment.
+3. Enter your ability scores. The app calculates modifiers, saves, and skills automatically.
+4. Add your attacks, spells, inventory, features, and other details.
+5. During a game, use the `Roll` buttons, `Short Rest`, `Long Rest`, and the dice roller.
+6. Use `Load Demo` to see a completed example character.
+
+Your data saves automatically. Use `Export JSON` or `Export All` to keep backups.
+
+### Tips
+
+- Use `New Character` for a fresh sheet, `Duplicate` to copy an existing one.
+- Use `Upload Portrait` instead of pasting image links.
+- Use `Export All` to back up all characters before clearing browser data.
+- Use `Print` for a paper-friendly version of your sheet.
+
+## Install on Phone
+
+The app works as a Progressive Web App and can be installed for offline use.
+
+### Android
+
+1. Open the app link in Chrome.
+2. Tap `Install App` if the button appears, or open the Chrome menu and tap `Add to Home screen`.
+
+### iPhone / iPad
+
+1. Open the app link in Safari.
+2. Tap the `Share` button.
+3. Tap `Add to Home Screen`, then `Add`.
+
+After installing, the app works offline.
+
+## Data and Privacy
+
+- Character data is saved in your browser's local storage and persists between visits.
+- No data is sent to any server. Everything stays on your device.
+- For extra privacy on shared devices, set a passphrase in `Customize` > `Security` to encrypt your data.
+- If you forget the passphrase, the encrypted save cannot be recovered. Always keep an exported backup.
+
+## Development
+
+The app is plain HTML, CSS, and JavaScript with no build step or dependencies.
+
+### Project Structure
+
+```
+index.html             Main page
+app.js                 All application logic
+styles.css             All styles
+service-worker.js      PWA caching and offline support
+manifest.webmanifest   PWA manifest
+icons/                 App icons
+```
+
+### Run Locally
+
+```bash
+git clone https://github.com/PeteComSci/dnd-command-sheet.git
+cd dnd-command-sheet
+python3 -m http.server 4173
+# Open http://localhost:4173
+```
+
+Or just open `index.html` directly in a browser. PWA install requires `https://` or `localhost`.
+
+### Deploy Your Own Copy
+
+This project includes a GitHub Actions workflow for GitHub Pages.
+
+1. Fork or clone this repository.
+2. In your repo, go to `Settings` > `Pages`.
+3. Set `Source` to `GitHub Actions`.
+4. Push to `main` — the workflow deploys automatically.
+5. Your site will be at `https://YOUR-USERNAME.github.io/YOUR-REPO-NAME/`
+
+The app is fully static, so any web host works — just upload the files.
+
+### Notes for Contributors
+
+- No frameworks or build tools — keep it vanilla.
+- Bump the `CACHE_NAME` version in `service-worker.js` when deploying changes.
+- All user-rendered content is escaped via `escapeHtml()` to prevent XSS.
+- Test on mobile (320px+) and desktop. Check print layout with `Ctrl+P`.
+
+## License
+
+MIT
