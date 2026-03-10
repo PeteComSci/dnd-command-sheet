@@ -1293,8 +1293,8 @@ body.compact .hero {
     display: none !important;
   }
 
-  /* Show all sections regardless of toggle state */
-  [data-section] {
+  /* Show all sections regardless of toggle state, except dice roller */
+  [data-section]:not([data-section="rolls"]) {
     display: block !important;
   }
 
