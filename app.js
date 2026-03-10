@@ -917,15 +917,17 @@ function renderAttacks() {
             />
             <span>Add proficiency</span>
           </label>
-          <button type="button" class="btn subtle" data-roll-attack="${attack.id}">
-            Hit <span data-attack-total="${attack.id}">${displaySigned(getAttackTotal(attack))}</span>
-          </button>
-          <button type="button" class="btn subtle" data-roll-damage="${attack.id}">
-            Dmg
-          </button>
-          <button type="button" class="btn subtle" data-remove="attacks" data-id="${attack.id}">
-            Remove
-          </button>
+          <div class="attack-actions">
+            <button type="button" class="btn subtle" data-roll-attack="${attack.id}">
+              Hit <span data-attack-total="${attack.id}">${displaySigned(getAttackTotal(attack))}</span>
+            </button>
+            <button type="button" class="btn subtle" data-roll-damage="${attack.id}">
+              Dmg
+            </button>
+            <button type="button" class="btn subtle" data-remove="attacks" data-id="${attack.id}">
+              ✕
+            </button>
+          </div>
         </div>
       `
     )
