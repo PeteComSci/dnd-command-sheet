@@ -563,7 +563,7 @@ textarea {
 }
 
 .list-row.attack-row {
-  grid-template-columns: minmax(170px, 1.2fr) 130px 120px minmax(180px, 1fr) minmax(140px, 1fr) 140px auto auto auto;
+  grid-template-columns: minmax(120px, 1fr) 110px 100px minmax(120px, 1fr) minmax(100px, 1fr) 110px auto auto auto;
 }
 
 .list-row.spell-row {
