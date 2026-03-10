@@ -54,6 +54,7 @@ button {
 .page-shell {
   width: min(1600px, calc(100vw - 32px));
   margin: 24px auto 48px;
+  padding-bottom: 64px;
 }
 
 .panel {
@@ -842,6 +843,14 @@ body.compact .hero {
   .span-2 {
     grid-column: auto;
   }
+
+  .help-fab {
+    width: 44px;
+    height: 44px;
+    font-size: 1.25rem;
+    bottom: 16px;
+    right: 16px;
+  }
 }
 
 /* Onboarding */
@@ -907,7 +916,13 @@ body.compact .hero {
 .onboarding-actions {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
+}
+
+.onboarding-nav {
+  display: flex;
+  gap: 8px;
 }
 
 @keyframes fadeIn {

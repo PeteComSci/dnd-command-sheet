@@ -108,31 +108,37 @@ const ENCUMBRANCE_OPTIONS = [
 ];
 
 const HELP_TOOLTIPS = {
-  "save-protection": "Encrypts your character data with a passphrase so it stays private in your browser. Without this, data is stored in plain text in localStorage.",
-  "encumbrance-mode": "Variant 5e uses three tiers (encumbered, heavily, over-capacity). Simple Capacity just checks total vs. carrying capacity. Disabled hides weight tracking.",
-  "proficiency-bonus": "Auto-calculated from level: +2 at levels 1\u20134, scaling to +6 at 17\u201320. Override it in Basics if your campaign uses custom values.",
-  "short-rest": "Resets per-short-rest custom resources. Does not touch HP, spell slots, or death saves \u2014 manage those manually.",
-  "long-rest": "Resets HP to max, clears temp HP, resets death saves, restores all spell slots, recovers half your hit dice (round down, minimum 1), and resets all custom resources.",
-  "death-saves": "Track three successes or three failures. Click dots to toggle. Long Rest resets both rows to zero.",
-  "spell-attack": "Calculated as: spellcasting ability modifier + proficiency bonus + spell attack bonus (extra). Set your casting ability and any bonus in the fields above.",
-  "spell-save-dc": "Calculated as: 8 + spellcasting ability modifier + proficiency bonus + spell save DC bonus. Set your casting ability and any bonus in the fields above.",
+  "save-protection": "Locks your saved characters behind a passphrase so nobody else who uses this browser can read them. Without it, your data is saved but not locked.",
+  "encumbrance-mode": "Variant 5e uses three weight tiers (encumbered, heavily, over-capacity). Simple Capacity just checks if you exceed your carry limit. Disabled turns off weight tracking entirely.",
+  "proficiency-bonus": "Auto-calculated from your level: +2 at levels 1\u20134, going up to +6 at level 17+. You can override it in the Basics section if your DM uses custom values.",
+  "short-rest": "Resets any custom resources you marked as per-short-rest. Does not change HP, spell slots, or death saves \u2014 adjust those yourself as your class rules allow.",
+  "long-rest": "Restores HP to max, clears temp HP, resets death saves, restores all spell slots, recovers half your total hit dice (round down, min 1), and resets all custom resources.",
+  "death-saves": "Click the dots to track successes and failures. Three successes = stabilized, three failures = death. Long Rest resets both rows.",
+  "spell-attack": "Your spell attack roll bonus. Calculated from: your spellcasting ability modifier + proficiency bonus + any extra spell attack bonus you entered above.",
+  "spell-save-dc": "The DC enemies roll against for your spells. Calculated from: 8 + your spellcasting ability modifier + proficiency bonus + any extra DC bonus you entered above.",
+  "hit-dice": "Your hit dice pool (e.g. 5d10 for a level 5 Fighter). Track how many you have used. Short rests let you spend hit dice to heal; Long Rest recovers half of them.",
+  "custom-resources": "Track class features with limited uses like Ki Points, Rage, Channel Divinity, or Bardic Inspiration. Set a max and mark how many you have used. Rests reset them automatically.",
+  "spellcasting-ability": "The ability score your class uses for spellcasting (e.g. Wisdom for Clerics, Charisma for Sorcerers). This drives your Spell Attack and Spell Save DC calculations.",
+  "global-attack-mod": "A bonus added to all attack rolls \u2014 useful for effects like Bless, magic items, or other situational bonuses that apply to every attack.",
 };
 
 const HELP_FAQ = [
-  { q: "Where is my data stored?", a: "Everything is saved in your browser\u2019s localStorage. Nothing is sent to a server. If you clear browser data, your characters are lost \u2014 use Export JSON to back up." },
-  { q: "Can multiple people use this?", a: "Yes! Each browser profile has its own storage. Use different browser profiles or devices for separate players. You can also use Character Slots to manage multiple characters in one browser." },
-  { q: "What happens if I clear my browser?", a: "All character data is erased. Always export a JSON backup before clearing site data or switching browsers." },
-  { q: "How does encryption work?", a: "When you set a passphrase, your character data is encrypted with AES-GCM via the Web Crypto API before being stored. The passphrase is never stored \u2014 you must enter it each session." },
-  { q: "How do I back up my characters?", a: "Click Export JSON in the header. This downloads a file you can later import on any device using Import JSON." },
-  { q: "Can I install this on my phone?", a: "Yes! On iOS Safari use Share \u2192 Add to Home Screen. On Android Chrome tap the install banner or menu \u2192 Install App. It works offline once installed." },
-  { q: "How do dice rolls work?", a: "Use the Roller section at the bottom. Type a formula like 2d6+3 or use the quick-roll buttons. Click any Check, Save, or Attack button to auto-roll with that modifier." },
+  { q: "Where is my data stored?", a: "Everything is saved inside your browser on this device \u2014 nothing is sent to the internet. If you clear your browser\u2019s saved data, your characters will be lost, so always keep a backup." },
+  { q: "How do I back up my characters?", a: "Click Export JSON in the header to download a backup file. To restore it, click Import JSON and pick that file. This also lets you move characters between devices." },
+  { q: "What happens if I clear my browser?", a: "All character data is erased. Always export a backup before clearing your browser data or switching to a new browser." },
+  { q: "What auto-calculates and what do I enter?", a: "You enter ability scores, level, and class details. The sheet auto-calculates: ability modifiers, proficiency bonus, saving throw totals, skill bonuses, spell attack, spell save DC, passive perception, and encumbrance. Combat stats like AC, HP, and speed are entered manually since they depend on your equipment and class features." },
+  { q: "How do Short and Long Rest work?", a: "Short Rest resets custom resources you marked as per-short-rest. Long Rest fully heals you, restores spell slots, resets death saves, recovers half your hit dice, and resets all custom resources. Adjust anything else manually as your class allows." },
+  { q: "Can multiple people use this?", a: "Yes! Each person can use their own browser or device. You can also manage multiple characters in one browser using Character Slots in the header." },
+  { q: "How does the passphrase protection work?", a: "Setting a passphrase scrambles your saved data so nobody else using this browser can read it. You will need to enter the passphrase each time you open the app. The passphrase itself is never saved anywhere." },
+  { q: "Can I install this on my phone?", a: "Yes! On iPhone, tap Share then Add to Home Screen. On Android, tap the browser menu and select Install App or Add to Home Screen. Once installed, it works without internet." },
+  { q: "How do dice rolls work?", a: "Use the Roller section at the bottom of the page. Type a formula like 2d6+3 or tap the quick-roll buttons (d20, d8, etc.). You can also click any Check, Save, or Attack button to auto-roll with that character\u2019s modifier." },
 ];
 
 const ONBOARDING_STEPS = [
-  { title: "Welcome to DnD Command Sheet", body: "A private, offline-friendly character sheet that lives entirely in your browser. No accounts, no servers \u2014 your data stays on your device." },
-  { title: "Feature Highlights", body: "Auto-calculated modifiers and spell DCs \u2022 Multiple character slots \u2022 Short & Long Rest automation \u2022 Built-in dice roller \u2022 Customizable themes \u2022 Optional AES encryption \u2022 Works offline as a PWA" },
-  { title: "Managing Characters", body: "Use Character Slot in the header to switch between characters. Duplicate, rename, or delete from the Customize panel. Export JSON to back up, Import JSON to restore." },
-  { title: "Getting Started", body: "Fill in your character\u2019s name, class, and level in the Basics section. Set ability scores and the modifiers will auto-calculate. Look for the ? icons throughout the sheet for tips on specific features." },
+  { title: "Welcome to DnD Command Sheet", body: "A private character sheet that lives entirely in your browser. No accounts, no sign-ups, no servers \u2014 your data stays on your device and works even without internet." },
+  { title: "What It Does For You", body: "Auto-calculates modifiers, saving throws, skill bonuses, and spell DCs \u2022 Tracks multiple characters with separate slots \u2022 Handles Short & Long Rest resets automatically \u2022 Built-in dice roller for checks, saves, and attacks \u2022 Customizable themes and layout \u2022 Optional passphrase lock for privacy \u2022 Works offline on your phone" },
+  { title: "Managing Characters", body: "Use Character Slot in the header to switch between characters. Duplicate, rename, or delete from the Customize panel. Always use Export JSON to save a backup file you can restore later with Import JSON." },
+  { title: "Getting Started", body: "Fill in your character\u2019s name, class, and level in the Basics section. Set your six ability scores and everything else auto-calculates. Look for the ? icons throughout the sheet for tips on specific features." },
 ];
 
 const PROFICIENCY_TYPES = ["Armor", "Weapon", "Tool", "Language", "Other"];
@@ -215,6 +221,7 @@ function cacheDom() {
   dom.onboardingContent = document.getElementById("onboarding-content");
   dom.onboardingDots = document.getElementById("onboarding-dots");
   dom.onboardingNext = document.getElementById("onboarding-next");
+  dom.onboardingBack = document.getElementById("onboarding-back");
 }
 
 function populateStaticSelects() {
@@ -522,6 +529,11 @@ function handleClickEvent(event) {
 
   if (event.target.closest("#onboarding-next")) {
     advanceOnboarding();
+    return;
+  }
+
+  if (event.target.closest("#onboarding-back")) {
+    retreatOnboarding();
     return;
   }
 
@@ -1560,6 +1572,13 @@ function advanceOnboarding() {
   }
 }
 
+function retreatOnboarding() {
+  if (onboardingStep > 0) {
+    onboardingStep--;
+    renderOnboardingStep();
+  }
+}
+
 function renderOnboardingStep() {
   const step = ONBOARDING_STEPS[onboardingStep];
   dom.onboardingContent.innerHTML =
@@ -1569,6 +1588,7 @@ function renderOnboardingStep() {
   ).join("");
   const isLast = onboardingStep === ONBOARDING_STEPS.length - 1;
   dom.onboardingNext.textContent = isLast ? "Get Started" : "Next";
+  dom.onboardingBack.classList.toggle("is-hidden", onboardingStep === 0);
 }
 
 function toggleTooltip(trigger) {

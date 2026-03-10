@@ -207,7 +207,7 @@
                 <input type="number" data-path="combat.hpTemp" />
               </label>
               <label>
-                <span>Hit Dice Pool</span>
+                <span>Hit Dice Pool</span> <button type="button" class="tooltip-trigger" data-tooltip="hit-dice" aria-label="Help: hit dice">?</button>
                 <input type="text" data-path="combat.hitDiceLabel" placeholder="3d10" />
               </label>
               <label>
@@ -215,11 +215,11 @@
                 <input type="number" min="0" data-path="combat.hitDiceUsed" />
               </label>
               <label>
-                <span>Global Attack Modifier</span>
+                <span>Global Attack Modifier</span> <button type="button" class="tooltip-trigger" data-tooltip="global-attack-mod" aria-label="Help: global attack modifier">?</button>
                 <input type="number" data-path="combat.globalAttackModifier" />
               </label>
               <label>
-                <span>Spellcasting Ability</span>
+                <span>Spellcasting Ability</span> <button type="button" class="tooltip-trigger" data-tooltip="spellcasting-ability" aria-label="Help: spellcasting ability">?</button>
                 <select data-path="spells.castingAbility" id="spellcasting-ability"></select>
               </label>
               <label>
@@ -261,7 +261,7 @@
             </div>
             <div class="resource-stack">
               <div class="section-subheading">
-                <h3>Custom Resources</h3>
+                <h3>Custom Resources</h3> <button type="button" class="tooltip-trigger" data-tooltip="custom-resources" aria-label="Help: custom resources">?</button>
                 <button type="button" class="btn subtle" data-add="resources">Add Resource</button>
               </div>
               <div id="resources-list" class="card-list"></div>
@@ -517,7 +517,10 @@
       <div class="onboarding-dots" id="onboarding-dots"></div>
       <div class="onboarding-actions">
         <button type="button" class="btn subtle" id="onboarding-skip">Skip</button>
-        <button type="button" class="btn" id="onboarding-next">Next</button>
+        <div class="onboarding-nav">
+          <button type="button" class="btn subtle is-hidden" id="onboarding-back">Back</button>
+          <button type="button" class="btn" id="onboarding-next">Next</button>
+        </div>
       </div>
     </aside>
 
