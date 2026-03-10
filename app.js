@@ -2,6 +2,7 @@ const STORAGE_KEY = "dnd-command-sheet.v1";
 const STORAGE_KEY_V2 = "dnd-command-sheet.v2";
 const SECURE_STORAGE_KEY = "dnd-command-sheet.secure.v1";
 const SESSION_STORAGE_KEY = "dnd-command-sheet.session.v1";
+const PLAINTEXT_STORAGE_KEY = "dnd-command-sheet.plain.v1";
 const INSTALL_NOTE_KEY = "dnd-command-sheet.install-note.dismissed";
 const ONBOARDING_KEY = "dnd-command-sheet.onboarding.dismissed";
 const SECURITY_ITERATIONS = 250000;
@@ -147,10 +148,11 @@ const SPELL_SLOT_LEVELS = Array.from({ length: 9 }, (_, index) => index + 1);
 
 const dom = {};
 let securityState = {
-  mode: "session",
-  panelMode: "setup",
+  mode: "plain",
+  panelMode: null,
   passphrase: "",
 };
+let saveIndicatorTimer = null;
 let appState = loadAppState();
 let state = getCurrentProfileState();
 let saveTimer = null;
@@ -222,6 +224,14 @@ function cacheDom() {
   dom.onboardingDots = document.getElementById("onboarding-dots");
   dom.onboardingNext = document.getElementById("onboarding-next");
   dom.onboardingBack = document.getElementById("onboarding-back");
+  dom.saveIndicator = document.getElementById("save-indicator");
+  dom.appModalOverlay = document.getElementById("app-modal-overlay");
+  dom.appModal = document.getElementById("app-modal");
+  dom.appModalTitle = document.getElementById("app-modal-title");
+  dom.appModalMessage = document.getElementById("app-modal-message");
+  dom.appModalInput = document.getElementById("app-modal-input");
+  dom.appModalCancel = document.getElementById("app-modal-cancel");
+  dom.appModalConfirm = document.getElementById("app-modal-confirm");
 }
 
 function populateStaticSelects() {
@@ -294,6 +304,10 @@ function bindEvents() {
   window.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
     dismissActiveTooltip();
+    if (!dom.appModal.classList.contains("is-hidden")) {
+      dom.appModalCancel.click();
+      return;
+    }
     if (!dom.onboardingModal.classList.contains("is-hidden")) {
       dismissOnboarding();
       return;
@@ -418,9 +432,9 @@ function handleClickEvent(event) {
   }
 
   if (event.target.closest("#load-demo")) {
-    if (window.confirm("Replace the current character with the Theron demo sheet?")) {
-      replaceCurrentProfile(buildDemoState());
-    }
+    showConfirmModal("Load Demo", "Replace the current character with the Theron demo sheet?").then((ok) => {
+      if (ok) replaceCurrentProfile(buildDemoState());
+    });
     return;
   }
 
@@ -455,9 +469,9 @@ function handleClickEvent(event) {
   }
 
   if (event.target.closest("#clear-sheet")) {
-    if (window.confirm("Reset the sheet to a blank character?")) {
-      replaceCurrentProfile(createDefaultState());
-    }
+    showConfirmModal("Reset Sheet", "Reset to a blank character? This cannot be undone.").then((ok) => {
+      if (ok) replaceCurrentProfile(createDefaultState());
+    });
     return;
   }
 
@@ -482,7 +496,7 @@ function handleClickEvent(event) {
   }
 
   if (event.target.closest("#manage-security")) {
-    openSecurityPanel(securityState.mode === "unlocked" ? "change" : securityState.panelMode || "setup");
+    openSecurityPanel(securityState.mode === "unlocked" ? "change" : "setup");
     return;
   }
 
@@ -551,6 +565,52 @@ function handleClickEvent(event) {
   const tooltipTrigger = event.target.closest("[data-tooltip]");
   if (tooltipTrigger) {
     toggleTooltip(tooltipTrigger);
+    return;
+  }
+
+  if (event.target.closest("#clear-roll-log")) {
+    state.rollLog = [];
+    renderRollLog();
+    scheduleSave();
+    return;
+  }
+
+  if (event.target.closest("#export-all")) {
+    exportAll();
+    return;
+  }
+
+  if (event.target.closest("#clear-feature-filter")) {
+    state.ui.featureFilter = "";
+    dom.featureFilter.value = "";
+    renderFeatures();
+    scheduleSave();
+    return;
+  }
+
+  const resourceAdjust = event.target.closest("[data-resource-adjust]");
+  if (resourceAdjust) {
+    const id = resourceAdjust.dataset.resourceAdjust;
+    const delta = Number(resourceAdjust.dataset.delta);
+    const resource = findCollectionItem("resources", id);
+    if (resource) {
+      resource.current = clamp(numberValue(resource.current) + delta, 0, numberValue(resource.max));
+      renderResources();
+      updateDisplays();
+      scheduleSave();
+    }
+    return;
+  }
+
+  const damageRoll = event.target.closest("[data-roll-damage]");
+  if (damageRoll) {
+    const entry = findCollectionItem("attacks", damageRoll.dataset.rollDamage);
+    if (entry && /^\d*d\d+/.test(entry.damage.trim())) {
+      const dmgFormula = entry.damage.trim().split(/\s+/)[0];
+      performRoll(dmgFormula, (entry.name || "Attack") + " Damage");
+    } else {
+      showAlertModal("No Damage Formula", "Enter a dice formula in the Damage field (e.g. 1d8+3).");
+    }
     return;
   }
 
@@ -738,13 +798,17 @@ function renderResources() {
           </label>
           <label>
             <span>Current</span>
-            <input
-              type="number"
-              data-collection="resources"
-              data-id="${resource.id}"
-              data-field="current"
-              value="${escapeHtml(String(resource.current))}"
-            />
+            <div class="resource-adjust">
+              <button type="button" class="btn subtle resource-btn" data-resource-adjust="${resource.id}" data-delta="-1">&minus;</button>
+              <input
+                type="number"
+                data-collection="resources"
+                data-id="${resource.id}"
+                data-field="current"
+                value="${escapeHtml(String(resource.current))}"
+              />
+              <button type="button" class="btn subtle resource-btn" data-resource-adjust="${resource.id}" data-delta="1">+</button>
+            </div>
           </label>
           <label>
             <span>Max</span>
@@ -856,6 +920,9 @@ function renderAttacks() {
           <button type="button" class="btn subtle" data-roll-attack="${attack.id}">
             Hit <span data-attack-total="${attack.id}">${displaySigned(getAttackTotal(attack))}</span>
           </button>
+          <button type="button" class="btn subtle" data-roll-damage="${attack.id}">
+            Dmg
+          </button>
           <button type="button" class="btn subtle" data-remove="attacks" data-id="${attack.id}">
             Remove
           </button>
@@ -944,15 +1011,23 @@ function getSecurityStatus() {
     };
   }
 
+  if (securityState.mode === "plain") {
+    return {
+      title: "Save protection",
+      body: "Your characters are saved in this browser. For extra privacy on shared devices, set a passphrase.",
+      settings: "Saved in this browser. Set a passphrase for extra privacy.",
+    };
+  }
+
   return {
     title: "Session-only storage",
-    body: "This app now avoids unprotected persistent saves. Set a passphrase to keep characters encrypted between visits. Until then, changes only last for this browser session.",
+    body: "Changes only last for this browser session. Set a passphrase to keep characters encrypted between visits.",
     settings: "Session-only until you set a passphrase.",
   };
 }
 
 function openSecurityPanel(mode = "setup") {
-  securityState.panelMode = mode;
+  securityState.panelMode = mode || "setup";
   renderSecurityUi();
   dom.securityPassphrase.focus();
 }
@@ -1282,7 +1357,8 @@ function renderProficiencies() {
 
 function renderFeatures() {
   const query = state.ui.featureFilter.trim().toLowerCase();
-  const filtered = getCollection("features").filter((feature) => {
+  const all = getCollection("features");
+  const filtered = all.filter((feature) => {
     if (!query) {
       return true;
     }
@@ -1290,7 +1366,11 @@ function renderFeatures() {
     return haystack.includes(query);
   });
 
-  dom.featuresList.innerHTML = filtered
+  const filterStatus = query
+    ? `<div class="filter-status"><span>Showing ${filtered.length} of ${all.length} features</span><a id="clear-feature-filter">Clear filter</a></div>`
+    : "";
+
+  dom.featuresList.innerHTML = filterStatus + filtered
     .map(
       (feature) => `
         <article class="feature-card">
@@ -1434,19 +1514,29 @@ function updateHeroBackdrop() {
 }
 
 function renderRollLog() {
+  if (!state.rollLog.length) {
+    dom.rollLog.innerHTML = `<div class="roll-entry"><div><span class="label">No rolls yet</span></div></div>`;
+    return;
+  }
   dom.rollLog.innerHTML = state.rollLog
-    .map(
-      (entry) => `
+    .map((entry) => {
+      const time = entry.timestamp ? formatTime(entry.timestamp) : "";
+      return `
         <div class="roll-entry">
           <div>
-            <span class="label">${escapeHtml(entry.label)}</span>
+            <span class="label">${escapeHtml(entry.label)}${time ? ` <time>${escapeHtml(time)}</time>` : ""}</span>
             <div>${escapeHtml(entry.formula)} • ${escapeHtml(entry.breakdown)}</div>
           </div>
           <strong>${escapeHtml(String(entry.total))}</strong>
         </div>
-      `
-    )
+      `;
+    })
     .join("");
+}
+
+function formatTime(ms) {
+  const d = new Date(ms);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 function syncBoundInputs() {
@@ -1631,6 +1721,91 @@ function dismissActiveTooltip() {
   if (!activeTooltip) return;
   activeTooltip.bubble.remove();
   activeTooltip = null;
+}
+
+function openAppModal(options) {
+  return new Promise((resolve) => {
+    dom.appModalTitle.textContent = options.title || "";
+    dom.appModalMessage.textContent = options.message || "";
+
+    if (options.input) {
+      dom.appModalInput.classList.remove("is-hidden");
+      dom.appModalInput.value = options.defaultValue || "";
+      dom.appModalInput.placeholder = options.placeholder || "";
+    } else {
+      dom.appModalInput.classList.add("is-hidden");
+    }
+
+    if (options.showCancel === false) {
+      dom.appModalCancel.classList.add("is-hidden");
+    } else {
+      dom.appModalCancel.classList.remove("is-hidden");
+    }
+
+    dom.appModalConfirm.textContent = options.confirmLabel || "OK";
+    dom.appModalOverlay.classList.remove("is-hidden");
+    dom.appModal.classList.remove("is-hidden");
+
+    function cleanup() {
+      dom.appModalOverlay.classList.add("is-hidden");
+      dom.appModal.classList.add("is-hidden");
+      dom.appModalConfirm.removeEventListener("click", onConfirm);
+      dom.appModalCancel.removeEventListener("click", onCancel);
+      dom.appModalOverlay.removeEventListener("click", onCancel);
+      dom.appModalInput.removeEventListener("keydown", onInputKey);
+    }
+
+    function onConfirm() {
+      cleanup();
+      if (options.input) {
+        resolve(dom.appModalInput.value);
+      } else if (options.confirm) {
+        resolve(true);
+      } else {
+        resolve(undefined);
+      }
+    }
+
+    function onCancel() {
+      cleanup();
+      if (options.input) {
+        resolve(null);
+      } else if (options.confirm) {
+        resolve(false);
+      } else {
+        resolve(undefined);
+      }
+    }
+
+    function onInputKey(event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        onConfirm();
+      }
+    }
+
+    dom.appModalConfirm.addEventListener("click", onConfirm);
+    dom.appModalCancel.addEventListener("click", onCancel);
+    dom.appModalOverlay.addEventListener("click", onCancel);
+    if (options.input) {
+      dom.appModalInput.addEventListener("keydown", onInputKey);
+      requestAnimationFrame(() => dom.appModalInput.focus());
+    } else {
+      requestAnimationFrame(() => dom.appModalConfirm.focus());
+    }
+  });
+}
+
+function showConfirmModal(title, message) {
+  return openAppModal({ title, message, confirm: true, confirmLabel: "Confirm" });
+}
+
+function showPromptModal(title, message, defaultValue, placeholder) {
+  return openAppModal({ title, message, input: true, defaultValue, placeholder, confirmLabel: "OK" });
+}
+
+function showAlertModal(title, message) {
+  return openAppModal({ title, message, showCancel: false, confirmLabel: "OK" });
 }
 
 function setupPwa() {
@@ -1882,12 +2057,13 @@ function performRoll(formula, label) {
       formula,
       breakdown: result.breakdown,
       total: result.total,
+      timestamp: Date.now(),
     });
     state.rollLog = state.rollLog.slice(0, 14);
     renderRollLog();
     scheduleSave();
   } catch (error) {
-    window.alert(error.message);
+    showAlertModal("Roll Error", error.message);
   }
 }
 
@@ -1904,6 +2080,17 @@ function exportSheet() {
   URL.revokeObjectURL(url);
 }
 
+function exportAll() {
+  const payload = JSON.stringify(snapshotAppState(), null, 2);
+  const blob = new Blob([payload], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "dnd-characters-all.json";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function importFromFile(event) {
   const [file] = event.target.files || [];
   if (!file) {
@@ -1915,13 +2102,13 @@ function importFromFile(event) {
       const parsed = JSON.parse(String(reader.result));
       importProfile(parsed);
     } catch (error) {
-      window.alert("Could not read that JSON file.");
+      showAlertModal("Import Error", "Could not read that JSON file.");
     } finally {
       dom.importFile.value = "";
     }
   };
   reader.onerror = () => {
-    window.alert("Could not read that file.");
+    showAlertModal("Import Error", "Could not read that file.");
     dom.importFile.value = "";
   };
   reader.readAsText(file);
@@ -1933,7 +2120,7 @@ function importPortrait(event) {
     return;
   }
   if (file.size > MAX_PORTRAIT_FILE_BYTES) {
-    window.alert("Use a portrait image smaller than 2 MB.");
+    showAlertModal("File Too Large", "Use a portrait image smaller than 2 MB.");
     dom.portraitFile.value = "";
     return;
   }
@@ -1946,7 +2133,7 @@ function importPortrait(event) {
     dom.portraitFile.value = "";
   };
   reader.onerror = () => {
-    window.alert("Could not read that image.");
+    showAlertModal("Import Error", "Could not read that image.");
     dom.portraitFile.value = "";
   };
   reader.readAsDataURL(file);
@@ -2028,14 +2215,32 @@ async function saveState() {
 
     if (securityState.mode === "unlocked") {
       await persistProtectedState(securityState.passphrase);
+      showSaveIndicator();
+      return;
+    }
+
+    if (securityState.mode === "plain") {
+      localStorage.setItem(PLAINTEXT_STORAGE_KEY, JSON.stringify(snapshotAppState()));
+      clearLegacyPlaintextStorage();
+      showSaveIndicator();
       return;
     }
 
     sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(snapshotAppState()));
     clearLegacyPlaintextStorage();
+    showSaveIndicator();
   } catch (error) {
     console.error("Could not save sheet state.", error);
   }
+}
+
+function showSaveIndicator() {
+  if (!dom.saveIndicator) return;
+  dom.saveIndicator.classList.add("visible");
+  clearTimeout(saveIndicatorTimer);
+  saveIndicatorTimer = setTimeout(() => {
+    dom.saveIndicator.classList.remove("visible");
+  }, 1500);
 }
 
 function loadAppState() {
@@ -2048,20 +2253,30 @@ function loadAppState() {
       return defaults;
     }
 
+    const plainSaved = localStorage.getItem(PLAINTEXT_STORAGE_KEY);
+    if (plainSaved) {
+      securityState.mode = "plain";
+      securityState.panelMode = null;
+      return hydrateAppState(JSON.parse(plainSaved));
+    }
+
     const sessionSaved = sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (sessionSaved) {
-      securityState.mode = "session";
-      securityState.panelMode = "setup";
-      return hydrateAppState(JSON.parse(sessionSaved));
+      const migrated = hydrateAppState(JSON.parse(sessionSaved));
+      localStorage.setItem(PLAINTEXT_STORAGE_KEY, JSON.stringify(migrated));
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      securityState.mode = "plain";
+      securityState.panelMode = null;
+      return migrated;
     }
 
     const saved = localStorage.getItem(STORAGE_KEY_V2);
     if (saved) {
       const migrated = hydrateAppState(JSON.parse(saved));
-      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(migrated));
+      localStorage.setItem(PLAINTEXT_STORAGE_KEY, JSON.stringify(migrated));
       clearLegacyPlaintextStorage();
-      securityState.mode = "session";
-      securityState.panelMode = "setup";
+      securityState.mode = "plain";
+      securityState.panelMode = null;
       return migrated;
     }
 
@@ -2075,26 +2290,26 @@ function loadAppState() {
           ),
         ],
       });
-      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(migrated));
+      localStorage.setItem(PLAINTEXT_STORAGE_KEY, JSON.stringify(migrated));
       clearLegacyPlaintextStorage();
-      securityState.mode = "session";
-      securityState.panelMode = "setup";
+      securityState.mode = "plain";
+      securityState.panelMode = null;
       return migrated;
     }
 
-    securityState.mode = "session";
-    securityState.panelMode = "setup";
+    securityState.mode = "plain";
+    securityState.panelMode = null;
     return defaults;
   } catch (error) {
-    securityState.mode = "session";
-    securityState.panelMode = "setup";
+    securityState.mode = "plain";
+    securityState.panelMode = null;
     return defaults;
   }
 }
 
 async function enableSaveProtection() {
   if (!globalThis.crypto?.subtle) {
-    window.alert("This browser cannot encrypt saved data. Use Export JSON for backups.");
+    showAlertModal("Not Supported", "This browser cannot encrypt saved data. Use Export JSON for backups.");
     return;
   }
 
@@ -2114,14 +2329,14 @@ async function enableSaveProtection() {
     renderSecurityUi();
   } catch (error) {
     console.error("Could not protect saved characters.", error);
-    window.alert("Could not protect saves in this browser. Try a smaller portrait image or use Export JSON.");
+    showAlertModal("Error", "Could not protect saves in this browser. Try a smaller portrait image or use Export JSON.");
   }
 }
 
 async function unlockProtectedSaves() {
   const passphrase = dom.securityPassphrase.value;
   if (!passphrase) {
-    window.alert("Enter your passphrase to unlock saved characters.");
+    showAlertModal("Passphrase Required", "Enter your passphrase to unlock saved characters.");
     return;
   }
 
@@ -2138,7 +2353,7 @@ async function unlockProtectedSaves() {
     syncCurrentStateRef();
     renderAll();
   } catch (error) {
-    window.alert("Could not unlock saved characters. Check the passphrase and try again.");
+    showAlertModal("Unlock Failed", "Could not unlock saved characters. Check the passphrase and try again.");
   }
 }
 
@@ -2158,7 +2373,7 @@ async function changeSavePassphrase() {
     renderSecurityUi();
   } catch (error) {
     console.error("Could not update the save passphrase.", error);
-    window.alert("Could not update the passphrase. Try a smaller portrait image or use Export JSON.");
+    showAlertModal("Error", "Could not update the passphrase. Try a smaller portrait image or use Export JSON.");
   }
 }
 
@@ -2171,7 +2386,7 @@ async function lockProtectedSaves() {
     await persistProtectedState(securityState.passphrase);
   } catch (error) {
     console.error("Could not lock protected saves.", error);
-    window.alert("Could not lock saves cleanly. Try again or use Export JSON first.");
+    showAlertModal("Error", "Could not lock saves cleanly. Try again or use Export JSON first.");
     return;
   }
   securityState.mode = "locked";
@@ -2186,13 +2401,19 @@ async function lockProtectedSaves() {
 async function persistProtectedState(passphrase) {
   const envelope = await encryptSecureState(passphrase, snapshotAppState());
   localStorage.setItem(SECURE_STORAGE_KEY, JSON.stringify(envelope));
-  sessionStorage.removeItem(SESSION_STORAGE_KEY);
-  clearLegacyPlaintextStorage();
+  clearAllPlaintextStorage();
 }
 
 function clearLegacyPlaintextStorage() {
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(STORAGE_KEY_V2);
+}
+
+function clearAllPlaintextStorage() {
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(STORAGE_KEY_V2);
+  localStorage.removeItem(PLAINTEXT_STORAGE_KEY);
+  sessionStorage.removeItem(SESSION_STORAGE_KEY);
 }
 
 function readSecureEnvelope() {
@@ -2202,11 +2423,11 @@ function readSecureEnvelope() {
 
 function validatePassphrase(passphrase, confirmation) {
   if (!passphrase || passphrase.length < 8) {
-    window.alert("Use a passphrase with at least 8 characters.");
+    showAlertModal("Passphrase Too Short", "Use a passphrase with at least 8 characters.");
     return false;
   }
   if (passphrase !== confirmation) {
-    window.alert("The passphrase and confirmation do not match.");
+    showAlertModal("Mismatch", "The passphrase and confirmation do not match.");
     return false;
   }
   return true;
@@ -2454,6 +2675,7 @@ function buildDemoState() {
       formula: "1d20+5",
       breakdown: "1d20[14] +5",
       total: 19,
+      timestamp: Date.now(),
     },
   ];
 
@@ -2861,8 +3083,8 @@ function switchProfile(profileId) {
   scheduleSave();
 }
 
-function createProfile() {
-  const requestedName = window.prompt("New character name:", "New Character");
+async function createProfile() {
+  const requestedName = await showPromptModal("New Character", "Enter a name:", "New Character", "Character name");
   if (requestedName === null) {
     return;
   }
@@ -2876,9 +3098,9 @@ function createProfile() {
   scheduleSave();
 }
 
-function duplicateCurrentProfile() {
+async function duplicateCurrentProfile() {
   const current = getCurrentProfile();
-  const requestedName = window.prompt("Name for the copy:", `${current.name} Copy`);
+  const requestedName = await showPromptModal("Duplicate Character", "Name for the copy:", `${current.name} Copy`, "Character name");
   if (requestedName === null) {
     return;
   }
@@ -2894,13 +3116,14 @@ function duplicateCurrentProfile() {
   scheduleSave();
 }
 
-function deleteCurrentProfile() {
+async function deleteCurrentProfile() {
   if (appState.profiles.length === 1) {
-    window.alert("You must keep at least one character slot.");
+    showAlertModal("Cannot Delete", "You must keep at least one character slot.");
     return;
   }
   const current = getCurrentProfile();
-  if (!window.confirm(`Delete character "${current.name}"?`)) {
+  const ok = await showConfirmModal("Delete Character", `Delete character "${current.name}"?`);
+  if (!ok) {
     return;
   }
   appState.profiles = appState.profiles.filter((profile) => profile.id !== current.id);
@@ -2910,9 +3133,9 @@ function deleteCurrentProfile() {
   scheduleSave();
 }
 
-function renameCurrentProfile() {
+async function renameCurrentProfile() {
   const current = getCurrentProfile();
-  const requestedName = window.prompt("Rename current character:", current.name);
+  const requestedName = await showPromptModal("Rename Character", "Rename current character:", current.name, "Character name");
   if (requestedName === null) {
     return;
   }
@@ -2924,9 +3147,10 @@ function renameCurrentProfile() {
   scheduleSave();
 }
 
-function importProfile(parsed) {
+async function importProfile(parsed) {
   if (parsed && Array.isArray(parsed.profiles) && parsed.currentProfileId) {
-    if (!window.confirm("This file contains multiple characters and will replace all current slots. Continue?")) {
+    const ok = await showConfirmModal("Import All", "This file contains multiple characters and will replace all current slots. Continue?");
+    if (!ok) {
       return;
     }
     appState = hydrateAppState(parsed);

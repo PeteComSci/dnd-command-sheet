@@ -63,6 +63,7 @@
         <div class="hero-actions">
           <button type="button" class="btn subtle" id="load-demo">Load Demo</button>
           <button type="button" class="btn subtle" id="export-sheet">Export JSON</button>
+          <button type="button" class="btn subtle" id="export-all">Export All</button>
           <button type="button" class="btn subtle" id="import-sheet">Import JSON</button>
           <button type="button" class="btn subtle" id="print-sheet">Print</button>
           <button type="button" class="btn subtle is-hidden" id="install-app">Install App</button>
@@ -218,18 +219,6 @@
                 <span>Global Attack Modifier</span> <button type="button" class="tooltip-trigger" data-tooltip="global-attack-mod" aria-label="Help: global attack modifier">?</button>
                 <input type="number" data-path="combat.globalAttackModifier" />
               </label>
-              <label>
-                <span>Spellcasting Ability</span> <button type="button" class="tooltip-trigger" data-tooltip="spellcasting-ability" aria-label="Help: spellcasting ability">?</button>
-                <select data-path="spells.castingAbility" id="spellcasting-ability"></select>
-              </label>
-              <label>
-                <span>Spell Save DC Bonus</span>
-                <input type="number" data-path="spells.saveDcBonus" />
-              </label>
-              <label>
-                <span>Spell Attack Bonus</span>
-                <input type="number" data-path="spells.attackBonusExtra" />
-              </label>
             </div>
             <div class="summary-strip">
               <article>
@@ -297,6 +286,20 @@
                 <h2>Spell Slots & Spellbook</h2>
               </div>
               <button type="button" class="btn subtle" data-add="spells.list">Add Spell</button>
+            </div>
+            <div class="spell-config-grid">
+              <label>
+                <span>Spellcasting Ability</span> <button type="button" class="tooltip-trigger" data-tooltip="spellcasting-ability" aria-label="Help: spellcasting ability">?</button>
+                <select data-path="spells.castingAbility" id="spellcasting-ability"></select>
+              </label>
+              <label>
+                <span>Spell Save DC Bonus</span>
+                <input type="number" data-path="spells.saveDcBonus" />
+              </label>
+              <label>
+                <span>Spell Attack Bonus</span>
+                <input type="number" data-path="spells.attackBonusExtra" />
+              </label>
             </div>
             <div class="summary-strip">
               <article>
@@ -424,10 +427,13 @@
                 <input type="text" id="roll-formula" placeholder="1d20+5 or 2d6+3" />
               </label>
               <button type="button" class="btn subtle" data-roll="1d20">d20</button>
+              <button type="button" class="btn subtle" data-roll="1d12">d12</button>
+              <button type="button" class="btn subtle" data-roll="1d10">d10</button>
               <button type="button" class="btn subtle" data-roll="1d8">d8</button>
               <button type="button" class="btn subtle" data-roll="1d6">d6</button>
               <button type="button" class="btn subtle" data-roll="1d4">d4</button>
               <button type="button" class="btn" id="roll-submit">Roll</button>
+              <button type="button" class="btn subtle" id="clear-roll-log">Clear Log</button>
             </div>
             <div id="roll-log" class="roll-log"></div>
           </section>
@@ -526,6 +532,19 @@
 
     <input type="file" id="import-file" accept="application/json" hidden />
     <input type="file" id="portrait-file" accept="image/*" hidden />
+
+    <div class="app-modal-overlay is-hidden" id="app-modal-overlay"></div>
+    <aside class="app-modal is-hidden" id="app-modal" role="dialog" aria-modal="true">
+      <h2 id="app-modal-title"></h2>
+      <p id="app-modal-message"></p>
+      <input type="text" id="app-modal-input" class="is-hidden" />
+      <div class="app-modal-actions">
+        <button type="button" class="btn subtle" id="app-modal-cancel">Cancel</button>
+        <button type="button" class="btn" id="app-modal-confirm">OK</button>
+      </div>
+    </aside>
+
+    <div class="save-indicator" id="save-indicator">Saved</div>
 
     <script src="app.js"></script>
   </body>
