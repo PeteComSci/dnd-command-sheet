@@ -1299,10 +1299,10 @@ function renderCustomChecks() {
               getCustomCheckTotal(check)
             )}</strong>
           </div>
-          <button type="button" class="btn subtle" data-roll-check="${check.id}">Roll</button>
-          <button type="button" class="btn subtle" data-remove="customChecks" data-id="${check.id}">
-            Remove
-          </button>
+          <div class="compact-actions">
+            <button type="button" class="btn subtle" data-roll-check="${check.id}">Roll</button>
+            <button type="button" class="btn subtle" data-remove="customChecks" data-id="${check.id}">✕</button>
+          </div>
         </div>
       `
     )

@@ -572,7 +572,7 @@ textarea {
 }
 
 .list-row.spell-row {
-  grid-template-columns: minmax(180px, 1.2fr) 90px minmax(110px, 0.8fr) 110px 110px auto;
+  grid-template-columns: minmax(120px, 1.2fr) 80px minmax(90px, 0.8fr) 100px minmax(90px, 1fr) auto;
 }
 
 .list-row.inventory-row {
@@ -580,11 +580,16 @@ textarea {
 }
 
 .list-row.compact-row {
-  grid-template-columns: minmax(150px, 1.2fr) 130px 110px 90px 90px auto auto;
+  grid-template-columns: minmax(100px, 1fr) minmax(0, 120px) minmax(0, 100px) minmax(0, 80px) 70px auto;
 }
 
 .list-row.prof-row {
-  grid-template-columns: 120px minmax(170px, 1fr) minmax(150px, 1fr) auto;
+  grid-template-columns: 100px minmax(100px, 1fr) minmax(100px, 1fr) auto;
+}
+
+.compact-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .row-meta {
