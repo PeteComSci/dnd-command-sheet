@@ -15,8 +15,8 @@ Live app: https://petecomsci.github.io/dnd-command-sheet/
 2. Fill in your character name, class, level, race, background, and alignment.
 3. Enter your ability scores. The app will calculate the modifiers for you.
 4. Mark your saving throws, skills, attacks, spell slots, items, resources, and features.
-5. If you want to keep the character after closing the browser, open `Customize` -> `Security` and set a passphrase.
-6. Use `Export JSON` to save a backup copy of your character file.
+5. Your data saves automatically in the browser. For extra privacy on shared devices, set a passphrase in `Customize` -> `Security`.
+6. Use `Export JSON` to save a backup of the current character, or `Export All` to back up all characters at once.
 7. During a game, use the `Roll` buttons, `Short Rest`, `Long Rest`, and the dice roller to update your sheet quickly.
 8. If you want the app on your phone, open the hosted site and install it from your browser menu or the in-app install button.
 
@@ -44,7 +44,8 @@ Live app: https://petecomsci.github.io/dnd-command-sheet/
 - Use `Duplicate` if you want to copy an existing character.
 - Use `Load Demo` if you want to see a finished example first.
 - Use `Upload Portrait` instead of pasting image links.
-- If you clear your browser data, use your `Export JSON` backup to restore the character.
+- Use `Export All` to back up all characters at once.
+- If you clear your browser data, use your exported backup to restore characters.
 
 ## Mobile Install
 
@@ -56,11 +57,10 @@ Live app: https://petecomsci.github.io/dnd-command-sheet/
 
 ## Save Security
 
-- By default, character changes are kept only for the current browser session.
-- To keep characters between visits, open `Customize` -> `Security` and set a passphrase.
-- Persistent saves are encrypted in the browser before they are written to storage.
+- Character data is saved automatically in your browser's local storage. Your characters persist between visits.
+- For extra privacy on shared devices, open `Customize` -> `Security` and set a passphrase. This encrypts your data before storing it.
 - If you forget the passphrase, the encrypted save cannot be recovered.
-- `Export JSON` is still the safest backup option before major edits.
+- `Export JSON` and `Export All` are the safest backup options before major edits or clearing browser data.
 
 ## Deploy To GitHub Pages
 
@@ -103,11 +103,17 @@ git push -u origin main
 - Character identity, class, race, alignment, XP, player, campaign, and portrait
 - All six abilities with automatic modifiers and configurable saving throw training
 - Skills with proficiency or expertise, misc bonuses, and one-click rolls
-- AC, initiative, speed, hit points, hit dice, death saves, rest buttons, and custom resources
-- Attacks, spellcasting ability, spell save DC, spell attack, spell slots, and spellbook entries
+- AC, initiative, speed, hit points, hit dice, death saves, rest buttons, and custom resources with +/- buttons
+- Attacks with hit and damage roll buttons, spellcasting ability, spell save DC, spell attack, spell slots, and spellbook entries
+- Dice roller with d4, d6, d8, d10, d12, d20, and custom formulas; timestamped roll log with clear
 - Inventory, currency, carrying weight, encumbrance tracking, proficiencies, languages, and custom checks
-- Features and traits with filtering
-- Theme presets, color customization, compact mode, section visibility toggles, import/export JSON, print, session autosave, and optional encrypted persistent saves
+- Features and traits with filtering and active filter indicator
+- Multiple character slots with duplicate, rename, and delete
+- Theme presets, color customization, compact mode, section visibility toggles
+- Import/export JSON (single character or all characters), print-friendly layout
+- Automatic local storage saves with optional passphrase encryption for shared devices
+- Onboarding walkthrough, contextual tooltips, and FAQ help system
+- Installable as a Progressive Web App with offline support
 
 ## Demo
 
