@@ -1691,28 +1691,28 @@ function toggleTooltip(trigger) {
   const text = HELP_TOOLTIPS[key];
   if (!text) return;
 
-  trigger.style.position = trigger.style.position || "relative";
-  const wrapper = trigger.parentElement;
-  if (wrapper && getComputedStyle(wrapper).position === "static") {
-    wrapper.style.position = "relative";
-  }
-
   const bubble = document.createElement("div");
   bubble.className = "tooltip-bubble";
   bubble.textContent = text;
-  trigger.parentElement.appendChild(bubble);
+  document.body.appendChild(bubble);
 
-  const rect = bubble.getBoundingClientRect();
-  if (rect.top < 8) {
+  const triggerRect = trigger.getBoundingClientRect();
+  const bubbleRect = bubble.getBoundingClientRect();
+  const centerX = triggerRect.left + triggerRect.width / 2;
+
+  let top = triggerRect.top - bubbleRect.height - 10;
+  let flipUp = false;
+  if (top < 8) {
+    top = triggerRect.bottom + 10;
+    flipUp = true;
     bubble.classList.add("flip-up");
   }
-  const overflowRight = rect.right - window.innerWidth + 8;
-  const overflowLeft = 8 - rect.left;
-  if (overflowRight > 0) {
-    bubble.style.transform = `translateX(calc(-50% - ${overflowRight}px))`;
-  } else if (overflowLeft > 0) {
-    bubble.style.transform = `translateX(calc(-50% + ${overflowLeft}px))`;
-  }
+
+  let left = centerX - bubbleRect.width / 2;
+  left = Math.max(8, Math.min(left, window.innerWidth - bubbleRect.width - 8));
+
+  bubble.style.top = `${top}px`;
+  bubble.style.left = `${left}px`;
 
   activeTooltip = { trigger, bubble };
 }
