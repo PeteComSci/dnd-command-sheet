@@ -1238,19 +1238,35 @@ body.compact .hero {
 }
 
 @media print {
+  /* Reset background and margins for paper */
   body {
-    background: white;
+    background: white !important;
+    color: #000 !important;
+    font-size: 10pt;
   }
 
   .page-shell {
     width: 100%;
     margin: 0;
+    padding-bottom: 0;
   }
 
+  /* Single column layout */
   .layout {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
+  .main-column,
+  .side-column {
+    gap: 12px;
+  }
+
+  .side-column {
+    order: initial;
+  }
+
+  /* Hide all interactive/web-only elements */
   .hero-actions,
   .profile-toolbar,
   .settings-drawer,
@@ -1259,35 +1275,265 @@ body.compact .hero {
   .onboarding-modal,
   .onboarding-overlay,
   .tooltip-trigger,
-  .btn,
-  .icon-btn,
+  .tooltip-bubble,
   [data-section="rolls"],
   .hero-backdrop,
   .install-note,
   .security-note,
   .save-indicator,
   .app-modal,
-  .app-modal-overlay {
+  .app-modal-overlay,
+  .filter-box,
+  .filter-status,
+  .resource-btn,
+  [data-add],
+  [data-remove],
+  .attack-actions [data-remove],
+  .compact-footer [data-remove] {
     display: none !important;
   }
 
+  /* Show all sections regardless of toggle state */
   [data-section] {
     display: block !important;
   }
 
-  .side-column {
-    order: initial;
+  /* Clean panel styling — no gradients, shadows, or decorative borders */
+  .panel {
+    background: white !important;
+    box-shadow: none !important;
+    border: 1.5pt solid #888 !important;
+    border-radius: 8px !important;
+    overflow: visible;
+    padding: 14px !important;
   }
 
-  .panel {
-    box-shadow: none;
+  .panel::before {
+    display: none !important;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+    padding: 14px !important;
+    margin-bottom: 12px;
+  }
+
+  /* Simplify hero stats */
+  .hero-stats div,
+  .summary-strip article {
+    border: 1pt solid #aaa;
+    border-radius: 6px;
+    background: none;
+    padding: 8px 10px;
+    min-width: 100px;
+  }
+
+  .summary-strip {
+    margin-top: 10px;
+  }
+
+  /* Make form inputs look like filled-in lines, not web fields */
+  input,
+  select,
+  textarea {
+    border: none !important;
+    border-bottom: 1pt solid #999 !important;
+    border-radius: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    padding: 4px 2px !important;
+    min-height: 0 !important;
+    font-size: inherit;
+    color: #000 !important;
+  }
+
+  textarea {
+    border: 1pt solid #999 !important;
+    border-radius: 4px !important;
+    padding: 6px !important;
+  }
+
+  input[type="color"] {
+    display: none !important;
+  }
+
+  /* Checkboxes keep their normal appearance */
+  input[type="checkbox"] {
+    border: 1pt solid #666 !important;
+    border-bottom: 1pt solid #666 !important;
+    width: auto !important;
+    padding: 0 !important;
+  }
+
+  /* Style buttons that show useful data (Hit, Roll) as text badges */
+  .btn,
+  .icon-btn {
+    border: 1pt solid #888 !important;
+    border-bottom: 1pt solid #888 !important;
+    border-radius: 4px !important;
+    background: none !important;
+    box-shadow: none !important;
+    color: #000 !important;
+    padding: 4px 8px !important;
+    font-size: 9pt;
+  }
+
+  /* Hide purely interactive buttons */
+  .btn[id],
+  #roll-submit {
+    display: none !important;
+  }
+
+  /* Keep Roll/Hit/Dmg badges visible as reference */
+  [data-roll-attack],
+  [data-roll-skill],
+  [data-roll-check],
+  [data-roll-kind],
+  [data-roll-damage] {
+    display: inline-block !important;
+  }
+
+  /* Ability cards */
+  .ability-card {
+    border: 1pt solid #aaa;
+    border-radius: 6px;
+    background: none;
+    padding: 10px;
+  }
+
+  .ability-score {
+    background: none !important;
+    border: 1pt solid #aaa !important;
+    border-radius: 6px !important;
+    padding: 8px !important;
+  }
+
+  /* List rows */
+  .list-row,
+  .resource-card,
+  .feature-card {
+    border: 1pt solid #bbb;
+    border-radius: 6px;
+    background: none;
+    padding: 8px;
+  }
+
+  /* Spell slot orbs — print as filled/empty circles */
+  .slot-orb {
+    border: 1.5pt solid #333 !important;
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .slot-orb.used {
+    background: #333 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .slot-card {
+    border: 1pt solid #aaa;
+    background: none;
+  }
+
+  /* Death save dots */
+  .dot-toggle {
+    border: 1.5pt solid #333 !important;
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .dot-toggle.active {
+    background: #333 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Roll badge */
+  .roll-badge {
+    background: none !important;
+    border: 1pt solid #888;
+    border-radius: 4px;
+    padding: 4px 8px;
+  }
+
+  /* Eyebrow labels */
+  .eyebrow {
+    color: #555 !important;
+  }
+
+  /* Accent-colored text → dark for print */
+  .bullet,
+  .ability-header .mod,
+  .tag {
+    color: #333 !important;
+  }
+
+  .tag {
+    background: #eee !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Resource adjust — hide buttons, keep input */
+  .resource-adjust {
+    display: block !important;
+  }
+
+  /* Grids: reasonable print sizing */
+  .basics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .combat-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .abilities-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .spell-config-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Page break management */
+  section.panel {
     break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   .list-row,
   .feature-card,
   .resource-card,
-  .slot-card {
+  .slot-card,
+  .ability-card {
     break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  h1, h2, h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .section-heading,
+  .section-subheading {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Labels */
+  label > span {
+    color: #555 !important;
+    font-size: 8pt;
+  }
+
+  .label,
+  .field-title {
+    color: #555 !important;
+    font-size: 8pt;
   }
 }
