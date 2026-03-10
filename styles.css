@@ -580,16 +580,22 @@ textarea {
 }
 
 .list-row.compact-row {
-  grid-template-columns: minmax(100px, 1.2fr) minmax(90px, 1fr) minmax(80px, 1fr) minmax(60px, 0.6fr) 70px auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.compact-footer {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.compact-footer .roll-badge {
+  min-width: 56px;
 }
 
 .list-row.prof-row {
-  grid-template-columns: 100px minmax(100px, 1fr) minmax(100px, 1fr) auto;
-}
-
-.compact-actions {
-  display: flex;
-  gap: 8px;
+  grid-template-columns: 100px minmax(0, 1fr) minmax(0, 1fr) auto;
 }
 
 .row-meta {

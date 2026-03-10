@@ -1293,15 +1293,12 @@ function renderCustomChecks() {
               value="${escapeHtml(String(check.bonus))}"
             />
           </label>
-          <div class="row-meta">
-            <span>Total</span>
+          <div class="compact-footer">
             <strong class="roll-badge" data-custom-total="${check.id}">${displaySigned(
               getCustomCheckTotal(check)
             )}</strong>
-          </div>
-          <div class="compact-actions">
             <button type="button" class="btn subtle" data-roll-check="${check.id}">Roll</button>
-            <button type="button" class="btn subtle" data-remove="customChecks" data-id="${check.id}">✕</button>
+            <button type="button" class="btn subtle" data-remove="customChecks" data-id="${check.id}">Remove</button>
           </div>
         </div>
       `
