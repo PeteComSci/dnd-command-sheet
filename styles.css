@@ -897,6 +897,11 @@ body.compact .hero {
     grid-template-columns: 1fr;
   }
 
+  .attack-actions,
+  .compact-actions {
+    flex-wrap: wrap;
+  }
+
   .span-2 {
     grid-column: auto;
   }
