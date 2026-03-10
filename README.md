@@ -7,6 +7,43 @@ Interactive offline-first Dungeons & Dragons character sheet built as a static w
 - Double-click `index.html`, or
 - In the project folder, run `python3 -m http.server 4173` and open `http://127.0.0.1:4173`
 
+## Simple User Guide
+
+1. Open the app in your browser.
+2. Fill in your character name, class, level, race, background, and alignment.
+3. Enter your ability scores. The app will calculate the modifiers for you.
+4. Mark your saving throws, skills, attacks, spell slots, items, resources, and features.
+5. If you want to keep the character after closing the browser, open `Customize` -> `Security` and set a passphrase.
+6. Use `Export JSON` to save a backup copy of your character file.
+7. During a game, use the `Roll` buttons, `Short Rest`, `Long Rest`, and the dice roller to update your sheet quickly.
+8. If you want the app on your phone, open the hosted site and install it from your browser menu or the in-app install button.
+
+### Phone install steps
+
+#### Android
+
+1. Open the hosted app in Chrome.
+2. Let the page load fully once.
+3. Tap `Install App` if the button appears.
+4. If the button does not appear, open the Chrome menu.
+5. Tap `Install app` or `Add to Home screen`.
+
+#### iPhone or iPad
+
+1. Open the hosted app in Safari.
+2. Let the page load fully once.
+3. Tap the `Share` button.
+4. Tap `Add to Home Screen`.
+5. Tap `Add`.
+
+### Simple tips
+
+- Use `New Character` if you want a fresh sheet.
+- Use `Duplicate` if you want to copy an existing character.
+- Use `Load Demo` if you want to see a finished example first.
+- Use `Upload Portrait` instead of pasting image links.
+- If you clear your browser data, use your `Export JSON` backup to restore the character.
+
 ## Mobile Install
 
 - Install support is built in as a Progressive Web App.
